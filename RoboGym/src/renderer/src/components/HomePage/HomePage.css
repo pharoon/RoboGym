@@ -1,0 +1,78 @@
+.HomePage{
+    height: 100vh;
+    width: 100vw;
+    background-color: #1d1d2e;
+    padding:20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    justify-content: center;
+
+}
+
+.RoboGymLogo{
+    width:10%;
+    height: 100%;
+}
+
+.HomrPage_Header{
+    display: flex;
+    align-items: end;
+    justify-content: center;
+
+    h2{
+        font-size: 40px;
+    }
+}
+
+.WelcomeText{
+    text-align: center;
+    white-space: wrap;
+    word-break: break-all;
+    margin:0;
+    
+}
+
+.fileUploader{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40%;
+    width: 100%;
+
+    svg, path{
+        fill: white;
+    }
+}
+
+.kYvNJ{
+    height: 100% !important;
+    width: 80% !important;
+    max-width: 80% !important;
+    border: dashed 2px white !important;
+    justify-content: center;
+}
+
+.ldhnvA{
+    flex-grow: 0 !important;
+}
+
+.HomePage_Buttons{
+    display: flex;
+    justify-content: center;
+    gap:5%;
+
+    button{
+        background-color: transparent;
+        border: 1px solid rgb(121, 115, 115);
+        border-radius: 10px;
+        cursor: pointer;
+        padding: 10px;
+        color: white;
+
+        &:hover{
+            background-color: #2e2e4b;
+        }
+
+    }
+}
