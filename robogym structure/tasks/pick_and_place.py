@@ -17,8 +17,8 @@ class PickAndPlaceTask(BaseTask):
 
         # Load or update markers
         if self.source_marker is None or self.target_marker is None:
-            self.source_marker = p.loadURDF("sphere_small.urdf", [0, 0, 0], globalScaling=0.3)
-            self.target_marker = p.loadURDF("cube_small.urdf", [0, 0, 0], globalScaling=0.3)
+            self.source_marker = p.loadURDF("sphere_small.urdf", [0, 0, 0], globalScaling=2.0)
+            self.target_marker = p.loadURDF("cube_small.urdf", [0, 0, 0], globalScaling=2.0)
 
         p.resetBasePositionAndOrientation(self.source_marker, self.env.source_pos.tolist(), [0, 0, 0, 1])
         p.resetBasePositionAndOrientation(self.target_marker, self.env.target_pos.tolist(), [0, 0, 0, 1])

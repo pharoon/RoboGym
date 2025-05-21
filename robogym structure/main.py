@@ -6,6 +6,7 @@ from model_manager import manager as mm
 from rl_agent.train_agent import train_model, test_model
 from database import models as db
 from analytics import logger
+
 TASK_CHOICES = {
     1: "pick_and_place",
     # 2: "button_pressing",

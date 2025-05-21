@@ -87,11 +87,15 @@ def test_model(model, task_name: str, episodes: int = 5):
     if task_name not in TASK_MAP:
         raise ValueError(f"Unknown task: {task_name}")
     
-    # Setup task and environment
-    dummy_env = RoboticArmEnv()
-    task_instance = TASK_MAP[task_name](dummy_env)
-    env = RoboticArmEnv(task=task_instance, render=True)
-    task_instance.env = env  
+    # # Setup task and environment
+    # dummy_env = RoboticArmEnv()
+    # task_instance = TASK_MAP[task_name](dummy_env)
+    # env = RoboticArmEnv(task=task_instance, render=True)
+    # task_instance.env = env  
+
+    env = RoboticArmEnv(render=True)
+    task = PickAndPlaceTask(env)
+    env.task = task
     time.sleep(1)
     total_rewards = []
 
@@ -105,7 +109,7 @@ def test_model(model, task_name: str, episodes: int = 5):
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             ep_reward += reward
-            time.sleep(1. / 240.)  # smooth visualization
+            time.sleep(1. / 60.)  # smooth visualization
 
         print(f"[✓] Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}")
         total_rewards.append(ep_reward)
