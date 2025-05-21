@@ -33,6 +33,7 @@ def init_db():
     """Create tables if they don't exist."""
     Base.metadata.create_all(bind=engine)
 
+
 def log_training(model_name: str, mean_reward: float):
     """Insert a training log."""
     session = SessionLocal()
@@ -40,6 +41,8 @@ def log_training(model_name: str, mean_reward: float):
     session.add(log)
     session.commit()
     session.close()
+
+
 
 def fetch_logs(model_name: str = None):
     """Fetch logs, optionally filtered by model."""
