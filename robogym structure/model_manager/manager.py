@@ -23,9 +23,12 @@ def _load_metadata() -> Dict:
 
 
 def _save_metadata(metadata: Dict):
-    with open(_get_metadata_path(), "w") as f:
-        json.dump(metadata, f, indent=4)
-
+    try:
+        with open(_get_metadata_path(), "w") as f:
+            json.dump(metadata, f, indent=4)
+        print("[✓] Metadata saved.")
+    except Exception as e:
+        print(f"[!] Failed to save metadata: {e}")
 
 def list_models() -> List[Dict]:
     metadata = _load_metadata()
