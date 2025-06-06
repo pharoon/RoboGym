@@ -26,7 +26,7 @@ def _save_metadata(metadata: Dict):
     try:
         with open(_get_metadata_path(), "w") as f:
             json.dump(metadata, f, indent=4)
-        print("[✓] Metadata saved.")
+        print("[] Metadata saved.")
     except Exception as e:
         print(f"[!] Failed to save metadata: {e}")
 
@@ -51,14 +51,17 @@ def save_model(model, model_name: str, algorithm="PPO"):
         "path": path
     }
     _save_metadata(metadata)
-    print(f"[✓] Model '{model_name}' saved and registered.")
+    print(f"[] Model '{model_name}' saved and registered.")
 
 
 def load_model(model_name: str):
+    print("model name is now ", model_name, flush=True)
     """
     Loads the model by name.
     """
     metadata = _load_metadata()
+    # print("metadata is now ", metadata, flush=True)
+    # print("metadata[omar]", metadata["Omar"])
     if model_name not in metadata:
         raise FileNotFoundError(f"No metadata found for model: {model_name}")
 
@@ -80,6 +83,6 @@ def delete_model(model_name: str):
             os.remove(model_path)
         del metadata[model_name]
         _save_metadata(metadata)
-        print(f"[✓] Model '{model_name}' deleted.")
+        print(f"[] Model '{model_name}' deleted.")
     else:
         print(f"[!] Model '{model_name}' not found.")

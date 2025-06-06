@@ -1,0 +1,99 @@
+.RoboGym-Train {
+  width: 100vw;
+  height: 100vh;
+  background-color: #1d1d2e;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.TrainForm {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  input {
+    border-radius: 5px;
+    border: none;
+    padding: 5px;
+    outline: none;
+  }
+}
+.TrainResults {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  flex: 1;
+
+  .Buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  textarea {
+    border: none;
+    outline: none;
+    min-height: 50%;
+    height: 50%;
+    max-height: 70%;
+    overflow-y: auto;
+    width: 100%;
+    resize: none;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #ededed;
+
+   
+  }
+}
+
+.Field {
+  display: flex;
+  gap: 10px;
+
+  select {
+    border-radius: 5px;
+    border: none;
+    padding: 5px;
+    outline: none;
+  }
+}
+
+textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: gray; /* Matches your UI background */
+  border-radius: 10px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background-color: #e4e4e7; /* Light thumb for visibility */
+  border-radius: 10px;
+}
+
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffffff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-top: 20px;
+}
+
+.spinner {
+  border: 6px solid #1d1d2e;
+  border-top: 6px solid #4f46e5; /* Indigo or accent color */
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

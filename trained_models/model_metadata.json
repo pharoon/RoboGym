@@ -1,0 +1,8 @@
+{
+    "a": {
+        "filename": "a.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-05T18:56:40.167517",
+        "path": "trained_models\\a.zip"
+    }
+}

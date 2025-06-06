@@ -28,7 +28,7 @@ def train_model_parallel(model_name: str, total_timesteps: int = 5000):
     log_training(model_name, -1)  # Placeholder reward (can be updated later)
 
     env.close()
-    return f"[✓] Finished training: {model_name}"
+    return f"[] Finished training: {model_name}"
 
 def run_parallel_training(model_names, timesteps_per_model):
     """

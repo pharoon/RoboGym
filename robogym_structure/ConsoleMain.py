@@ -1,6 +1,5 @@
 import os
 import argparse
-from database import models
 
 from model_manager import manager as mm
 from rl_agent.train_agent import train_model, test_model
@@ -13,11 +12,11 @@ TASK_CHOICES = {
     # 3: "path_following",
 }
 def initialize():
-    print("[✓] Initializing RoboGym environment...")
+    print("[] Initializing RoboGym environment...")
     db.init_db()
     os.makedirs("trained_models", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
-    print("[✓] Directories and database initialized.")
+    print("[] Directories and database initialized.")
 
 def train():
     model_name = input("Enter model name to train: ")
@@ -39,7 +38,7 @@ def train():
             print("❌ Please enter a valid number.")
 
     path = train_model(timesteps, model_name, task_name)
-    print(f"[✓] Training complete. Final model saved at: {path}")
+    print(f"[] Training complete. Final model saved at: {path}")
 
 def test():
     models = mm.list_models()
@@ -53,6 +52,7 @@ def test():
 
     choice = int(input("Choose a model to test: ")) - 1
     model_name = models[choice]['name']
+    print("models are  now ", models)
     RL_model =mm.load_model(model_name=model_name)
     
     print("\nAvailable Tasks:")
@@ -106,7 +106,7 @@ def upload_model():
 
     model = PPO.load(dest_path)
     mm.save_model(model, model_name)
-    print(f"[✓] Model uploaded and registered as '{model_name}'")
+    print(f"[] Model uploaded and registered as '{model_name}'")
 
 def menu():
     print("\n==== RoboGym Control Center ====")

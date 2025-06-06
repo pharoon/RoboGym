@@ -1,8 +1,10 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-
+import { WebSocketConnector } from './Utils/Websocket'
+import { spawn } from 'child_process'
+let pyProc;
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -51,14 +53,34 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-
+  
   createWindow()
 
+  ipcMain.on("initiate-websocket-connection", (_, url: string)=>{
+    console.log("We should have initated the websocket connection: ", url)
+    const ws = new WebSocketConnector('ws://localhost:8765');
+  })
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+
+  // const pythonScriptPath = path.join(__dirname, '..', '..',"..", 'robogym structure', 'flask_api.py');
+ 
+
+
+  const pythonFlask = path.join(__dirname,"..","..","..", "robogym_structure", "flask_Apis.py")
+  console.log(pythonFlask)
+  pyProc = spawn('python', [pythonFlask]);
+
+  pyProc.stdout.on('data', (data) => {
+    console.log(`[Python] ${data}`);
+  });
+
+  pyProc.stderr.on('data', (data) => {
+    console.error(`[Python Error] ${data}`);
+  });
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -72,3 +94,7 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+function runAnyPythonFunctions(params) {
+
+}

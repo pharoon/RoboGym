@@ -46,9 +46,13 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
 
 def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="pick_and_place"):
+    yield f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n"
+
     task_class = TASK_MAP.get(task_name)
     if not task_class:
+        yield f"data: ❌ Task '{task_name}' not found.\n\n"
         raise ValueError(f"Task '{task_name}' not found.")
+
     from simulation.robotic_arm_env import RoboticArmEnv
     from stable_baselines3 import PPO
     from stable_baselines3.common.callbacks import BaseCallback
@@ -72,38 +76,33 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
     # Save final model
     final_model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
     model.save(final_model_path)
-    print("finished")
     # ✅ Register model in metadata
     mm.save_model(model, model_name)
 
-    print(f"[✓] Final model saved to: {final_model_path}")
+    yield f"data: ✅ Training complete. Model saved at {final_model_path}\n\n"
     env.close()
     return final_model_path
 
 def test_model(model, task_name: str, episodes: int = 5):
-    
-
-    # Lookup task
     if task_name not in TASK_MAP:
-        raise ValueError(f"Unknown task: {task_name}")
-    
-    # # Setup task and environment
-    # dummy_env = RoboticArmEnv()
-    # task_instance = TASK_MAP[task_name](dummy_env)
-    # env = RoboticArmEnv(task=task_instance, render=True)
-    # task_instance.env = env  
+        yield f"data: ❌ Unknown task: {task_name}\n\n"
+        return
+
+    yield f"data: 🛠️ Setting up environment for task '{task_name}'\n\n"
 
     env = RoboticArmEnv(render=True)
     task = PickAndPlaceTask(env)
     env.task = task
     time.sleep(1)
+
     total_rewards = []
 
     for episode in range(episodes):
         obs = env.reset()
         done = False
         ep_reward = 0
-        print(f"\n🎬 Episode {episode + 1} started...")
+
+        yield f"data: 🎬 Episode {episode + 1} started...\n\n"
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -111,10 +110,11 @@ def test_model(model, task_name: str, episodes: int = 5):
             ep_reward += reward
             time.sleep(1. / 60.)  # smooth visualization
 
-        print(f"[✓] Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}")
+        yield f"data: ✅ Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n"
         total_rewards.append(ep_reward)
 
     env.close()
 
     avg_reward = sum(total_rewards) / len(total_rewards)
-    print(f"\n📊 Average Reward over {episodes} episodes: {avg_reward:.2f}")    
+    yield f"data: 📊 Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n"
+    
