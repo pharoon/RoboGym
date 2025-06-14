@@ -6,10 +6,9 @@ from model_manager import manager as mm
 from database import models as db 
 from tasks.pick_and_place import PickAndPlaceTask
 import time
-
+import random
 TASK_MAP = {
     "pick_and_place": PickAndPlaceTask,
-    # Add more tasks here
 }
 
 MODELS_DIR = "trained_models"
@@ -46,11 +45,11 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
 
 def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="pick_and_place"):
-    yield f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n"
+    print( f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
 
     task_class = TASK_MAP.get(task_name)
     if not task_class:
-        yield f"data: ❌ Task '{task_name}' not found.\n\n"
+        print( f"data: ❌ Task '{task_name}' not found.\n\n")
         raise ValueError(f"Task '{task_name}' not found.")
 
     from simulation.robotic_arm_env import RoboticArmEnv
@@ -58,12 +57,35 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
     from stable_baselines3.common.callbacks import BaseCallback
     import os
 
-    dummy_env = RoboticArmEnv()  # just to pass to the task class
+    dummy_env = RoboticArmEnv()  
     task_instance = task_class(dummy_env)
     env = RoboticArmEnv(task=task_instance, render=False)
 
-    task_instance.env = env  # link the real env
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=LOGS_DIR)
+    task_instance.env = env  
+    model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
+    
+    if os.path.exists(model_path):
+        print(f"data: 🔄 Found existing model at {model_path}. Loading and continuing training...\n\n")
+        model = PPO.load(model_path, env=env, tensorboard_log=LOGS_DIR)
+        
+        
+    else:
+        print(f"data: 🚀 No existing model found. Starting fresh training...\n\n")
+        model = PPO(
+            "MlpPolicy",
+            env,
+            verbose=1,
+            tensorboard_log=LOGS_DIR,
+            learning_rate=1e-4,     
+            n_steps=2048,
+            batch_size=64,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=0.01,
+            vf_coef=0.5,
+            max_grad_norm=0.5
+        )
 
     save_callback = SaveOnBestTrainingRewardCallback(
         check_freq=10,
@@ -73,22 +95,20 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
 
     model.learn(total_timesteps=total_timesteps, callback=save_callback)
 
-    # Save final model
     final_model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
     model.save(final_model_path)
-    # ✅ Register model in metadata
     mm.save_model(model, model_name)
 
-    yield f"data: ✅ Training complete. Model saved at {final_model_path}\n\n"
+    print( f"data: ✅ Training complete. Model saved at {final_model_path}\n\n")
     env.close()
     return final_model_path
 
 def test_model(model, task_name: str, episodes: int = 5):
     if task_name not in TASK_MAP:
-        yield f"data: ❌ Unknown task: {task_name}\n\n"
+        print( f"data: ❌ Unknown task: {task_name}\n\n")
         return
 
-    yield f"data: 🛠️ Setting up environment for task '{task_name}'\n\n"
+    print( f"data: 🛠️ Setting up environment for task '{task_name}'\n\n")
 
     env = RoboticArmEnv(render=True)
     task = PickAndPlaceTask(env)
@@ -102,19 +122,18 @@ def test_model(model, task_name: str, episodes: int = 5):
         done = False
         ep_reward = 0
 
-        yield f"data: 🎬 Episode {episode + 1} started...\n\n"
+        print( f"data: 🎬 Episode {episode + 1} started...\n\n")
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
             ep_reward += reward
-            time.sleep(1. / 60.)  # smooth visualization
+            time.sleep(1. / 30.)  
 
-        yield f"data: ✅ Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n"
+        print( f"data: ✅ Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n")
         total_rewards.append(ep_reward)
 
     env.close()
 
     avg_reward = sum(total_rewards) / len(total_rewards)
-    yield f"data: 📊 Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n"
-    
+    print( f"data: 📊 Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n")

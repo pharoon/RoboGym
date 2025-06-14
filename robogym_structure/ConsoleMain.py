@@ -18,6 +18,21 @@ def initialize():
     os.makedirs("logs", exist_ok=True)
     print("[] Directories and database initialized.")
 
+
+def trainNav():
+    print("\n==== RoboGym Training Center ====")
+    print("1. Train a new model")
+    print("2. Continue training an existing model")
+    choice = input("Select an option: ").strip()
+
+    if choice == "1":
+        train()
+    elif choice == "2":
+        list_models()
+        train()
+    else:
+        print("Invalid option.")
+
 def train():
     model_name = input("Enter model name to train: ")
     timesteps = int(input("Enter total training timesteps: "))
@@ -127,7 +142,7 @@ def main():
             initialize()
 
         elif choice == "2":
-            train()
+            trainNav()
         elif choice == "3":
             test()
         elif choice == "4":
