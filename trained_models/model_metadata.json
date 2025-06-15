@@ -32,7 +32,13 @@
     "tt6": {
         "filename": "tt6.zip",
         "algorithm": "PPO",
-        "created_at": "2025-06-14T11:06:23.712421",
+        "created_at": "2025-06-15T00:16:24.638828",
         "path": "trained_models\\tt6.zip"
+    },
+    "tt7": {
+        "filename": "tt7.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-15T04:13:24.001643",
+        "path": "trained_models\\tt7.zip"
     }
 }

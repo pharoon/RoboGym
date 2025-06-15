@@ -121,7 +121,8 @@ def test_model(model, task_name: str, episodes: int = 5):
         obs = env.reset()
         done = False
         ep_reward = 0
-
+        # task.switch_tables = random.choice([True, False])
+        print( f"data: 🎬 Starting episode {episode + 1}/{episodes} with task switch={task.switch_tables}\n\n")
         print( f"data: 🎬 Episode {episode + 1} started...\n\n")
 
         while not done:

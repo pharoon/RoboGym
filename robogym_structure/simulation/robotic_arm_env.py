@@ -10,7 +10,7 @@ class RoboticArmEnv(gym.Env):
         super(RoboticArmEnv, self).__init__()
         self.task = task
         self.object_id = None  # Simulated grasped object
-
+        self.render_mode = render
         self.client = p.connect(p.GUI if render else p.DIRECT)
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -9.81)
@@ -18,6 +18,7 @@ class RoboticArmEnv(gym.Env):
         self.robot_urdf = os.path.join(pybullet_data.getDataPath(), "kuka_iiwa/model.urdf")
         self._load_environment()
         self.num_joints = p.getNumJoints(self.robot_id)
+        self.end_effector_index = self.num_joints - 1
         self.max_force = 500
 
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(self.num_joints,), dtype=np.float32)
@@ -47,11 +48,11 @@ class RoboticArmEnv(gym.Env):
         
 
 
-        TABLE_HALF_EXTENTS = [0.2, 0.2, 0.2]  # = 40cm x 40cm x 40cm tall table
-        TABLE_HEIGHT = TABLE_HALF_EXTENTS[2] * 2  # Full height = 0.4m
-        OBJECT_HEIGHT = 0.05  # Adjust based on your object's real size
+        TABLE_HALF_EXTENTS = [0.2, 0.2, 0.2] 
+        TABLE_HEIGHT = TABLE_HALF_EXTENTS[2] * 2  
+        OBJECT_HEIGHT = 0.05  
 
-        # Pick table (Y+)
+        
         self.table_source_id = p.createMultiBody(
             baseMass=0,
             baseCollisionShapeIndex=p.createCollisionShape(
@@ -63,7 +64,7 @@ class RoboticArmEnv(gym.Env):
                 halfExtents=TABLE_HALF_EXTENTS,
                 rgbaColor=[0.6, 0.3, 0.1, 1]
             ),
-            basePosition=[0.65, 0.3, TABLE_HALF_EXTENTS[2]],  # X = 0.5 to move forward
+            basePosition=[0.65, 0.3, TABLE_HALF_EXTENTS[2]],  
             useMaximalCoordinates=True
         )
 
@@ -89,24 +90,32 @@ class RoboticArmEnv(gym.Env):
             cameraPitch=-35,
             cameraTargetPosition=[0, 0, 0]
         )
+        
 
     def _get_observation(self):
         joint_angles = [p.getJointState(self.robot_id, i)[0] for i in range(self.num_joints)]
         ee_pos = p.getLinkState(self.robot_id, self.num_joints - 1)[0]  # End-effector position
         obj_pos = p.getBasePositionAndOrientation(self.object_id)[0]  # Object position
-        if hasattr(self, "phase") and self.phase == "pick":
-            current_target = self.source_pos
-        else:
-            current_target = self.target_pos
 
-        
+        # Set target based on current phase
+        if hasattr(self, "phase"):
+            if self.phase == "pick":
+                current_target = self.source_pos
+            elif self.phase == "place":
+                current_target = self.target_pos
+            else:
+                current_target = np.zeros(3)
+        else:
+            current_target = np.zeros(3)
+
         obs = np.concatenate([
-            joint_angles,          # self.num_joints (e.g. 7 for KUKA)
-            ee_pos,                # 3 values
-            obj_pos,               # 3 values
-            current_target          # 3 values
+            joint_angles,     # self.num_joints (e.g. 7 for KUKA)
+            ee_pos,           # 3 values
+            obj_pos,          # 3 values
+            current_target    # 3 values
         ])
         return np.array(obs, dtype=np.float32)
+
 
     def step(self, action):
         action = np.clip(action, -1.0, 1.0)

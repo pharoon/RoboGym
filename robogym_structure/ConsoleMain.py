@@ -8,8 +8,7 @@ from analytics import logger
 
 TASK_CHOICES = {
     1: "pick_and_place",
-    # 2: "button_pressing",
-    # 3: "path_following",
+    
 }
 def initialize():
     print("[] Initializing RoboGym environment...")
