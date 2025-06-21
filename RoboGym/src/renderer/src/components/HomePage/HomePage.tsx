@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import DeleteModel from '../Modals/DeleteModel'
 const HomePage = () => {
   const navigate = useNavigate()
-  const [showDeleteModel, setShowDeleteModel] = useState<boolean>(true)
+  const [showDeleteModel, setShowDeleteModel] = useState<boolean>(false)
   
   return (
     <div className="HomePage">
@@ -31,7 +31,7 @@ const HomePage = () => {
           Delete Model
         </button>
 
-        <button onClick={() => {}}>Select Existing Project</button>
+        <button onClick={() => {navigate("/AllModels")}}>List All Models</button>
       </div>
       <DeleteModel showDeleteModal={showDeleteModel} setShowdeleteModal={setShowDeleteModel}/>
     </div>
