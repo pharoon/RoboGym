@@ -4,6 +4,7 @@ from flask_cors import CORS
 from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model, GetModelRewards, compareModels
 from model_manager import manager as mm
 from database import models as db  
+from multiprocessing import Process
 # import sys
 # import io
 app = Flask(__name__)
@@ -67,7 +68,8 @@ def api_get_rewards():
     data = request.json
     model_name= data["Model_Name"]
     print("Model name is ", model_name, flush=True)
-    GetModelRewards(model_name)
+    # GetModelRewards(model_name)
+    Process(target=GetModelRewards, args=(model_name,)).start()
     return jsonify({"status": "ok", "received_path":1})
 
 
@@ -76,7 +78,9 @@ def api_compare_Models():
     data = request.json
     firstModel= data["first_model"]
     secondModel= data["second_model"]
-    compareModels(firstModel, secondModel)
+    # compareModels(firstModel, secondModel)
+    Process(target=compareModels, args=(firstModel, secondModel)).start()
+
     return jsonify({"status": "ok", "received_path":1})
 
 
