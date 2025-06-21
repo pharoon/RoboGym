@@ -1,7 +1,7 @@
 # flask_api.py
 from flask import Flask, request, jsonify, Response , stream_with_context
 from flask_cors import CORS
-from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model
+from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model, GetModelRewards, compareModels
 from model_manager import manager as mm
 from database import models as db  
 # import sys
@@ -61,6 +61,24 @@ def api_upload_model():
     print("File path is now ", filePath, flush=True)
     upload_model(file_path=filePath, model_name=modelName)
     return jsonify({"status": "ok", "received_path":1})
+
+@app.post("/getRewards")
+def api_get_rewards():
+    data = request.json
+    model_name= data["Model_Name"]
+    print("Model name is ", model_name, flush=True)
+    GetModelRewards(model_name)
+    return jsonify({"status": "ok", "received_path":1})
+
+
+@app.post("/compareModels")
+def api_compare_Models():
+    data = request.json
+    firstModel= data["first_model"]
+    secondModel= data["second_model"]
+    compareModels(firstModel, secondModel)
+    return jsonify({"status": "ok", "received_path":1})
+
 
 @app.post("/delete")
 def api_delete_model():

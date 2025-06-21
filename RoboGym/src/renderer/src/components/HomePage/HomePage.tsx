@@ -77,6 +77,7 @@ const HomePage = () => {
           Delete Model
         </button>
         <button onClick={handleFileUpload}>Upload Exisiting Model</button>
+        <button onClick={()=>{navigate("/Analytics")}}>Analytics Results</button>
 
         <button
           onClick={() => {

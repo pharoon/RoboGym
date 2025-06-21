@@ -69,10 +69,6 @@ def upload_model(file_path, model_name):
     print(f" Model uploaded and registered as '{model_name}'")
 
 
-
-
-
-
 def test_model_stream(model_name: str, task_number: int, episodes: int):
     RL_model = mm.load_model(model_name)
     task_name = TASK_CHOICES.get(task_number)
@@ -87,3 +83,10 @@ def test_model_stream(model_name: str, task_number: int, episodes: int):
             yield line
     except Exception as e:
         yield f"🚨 Error during testing: {str(e)}"
+
+
+def GetModelRewards(modelName):
+    logger.plot_model_rewards(model_name=modelName)
+
+def compareModels(model1, model2):
+    logger.compare_models([model1,model2])

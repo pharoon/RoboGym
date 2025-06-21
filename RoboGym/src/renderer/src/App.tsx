@@ -4,6 +4,7 @@ import Train from './components/Trainpage/Train'
 import "./app.css"
 import Test from './components/TestPage/Test'
 import AllModel from './components/ListModelsPage/AllModel'
+import AnalyticsComponent from './components/AnalyticsPage/Analytics'
 function App(): React.JSX.Element {
   
   return (
@@ -13,6 +14,7 @@ function App(): React.JSX.Element {
         <Route path="/Train" element={<Train />} />
         <Route path="/Test" element={<Test />} />
         <Route path="/AllModels" element={<AllModel />} />
+        <Route path="/Analytics" element={<AnalyticsComponent />} />
       </Routes>
     </Router>
   )
