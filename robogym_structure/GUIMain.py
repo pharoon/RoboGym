@@ -54,17 +54,13 @@ def analytics_menu():
     else:
         print("Invalid choice.")
 
-def upload_model():
+def upload_model(file_path, model_name):
     from stable_baselines3 import PPO
     import shutil
-
-    file_path = input("Enter path to existing .zip model file: ")
-    model_name = input("Enter name to register the model as: ")
 
     if not os.path.exists(file_path):
         print(" File does not exist.")
         return
-
     dest_path = os.path.join("trained_models", f"{model_name}.zip")
     shutil.copy(file_path, dest_path)
 

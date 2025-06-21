@@ -10,3 +10,7 @@ button {
     background-color: #2e2e4b;
   }
 }
+
+.MuiDialog-paper{
+  padding: 20px;
+}

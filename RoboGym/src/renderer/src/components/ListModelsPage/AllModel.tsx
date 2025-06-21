@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, Typography, Grid, Box, Button } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import DeleteIcon from '@mui/icons-material/Delete'
+import { toast, ToastContainer } from 'react-toastify'
 const AllModel = () => {
   const [Models, setModels] = useState<any[]>([])
   const navigate = useNavigate() // To navigate to home page
@@ -35,12 +36,13 @@ const AllModel = () => {
       })
       .then(() => {
         fetchModels()
+        toast.success("Model has been deleted")
       })
       .catch((err) => console.error('Error deleting model:', err))
   }
 
   return (
-    <div style={{ background: '#1d1d2e', height: '100vh', width: '100vw' }}>
+    <div style={{ background: '#1d1d2e', height: '100vh', width: '100vw', overflow:"auto" }}>
       <Box textAlign="center" my={4}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           📦 Available AI Models
@@ -114,6 +116,7 @@ const AllModel = () => {
       <Box textAlign="center" mt={5}>
         <button onClick={() => navigate('/')}>Return Back</button>
       </Box>
+      <ToastContainer position='bottom-left'/>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -69,6 +69,16 @@ app.whenReady().then(() => {
   // const pythonScriptPath = path.join(__dirname, '..', '..',"..", 'robogym structure', 'flask_api.py');
  
 
+ipcMain.handle('open-file-dialog', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    
+    filters: [{ name: 'ZIP Files', extensions: ['zip'] }],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
+});
 
   const pythonFlask = path.join(__dirname,"..","..","..", "robogym_structure", "flask_Apis.py")
   console.log(pythonFlask)

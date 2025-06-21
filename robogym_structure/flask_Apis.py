@@ -1,7 +1,7 @@
 # flask_api.py
 from flask import Flask, request, jsonify, Response , stream_with_context
 from flask_cors import CORS
-from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model
+from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model
 from model_manager import manager as mm
 from database import models as db  
 # import sys
@@ -52,6 +52,15 @@ def api_train():
 @app.get("/models")
 def api_list_models():
     return jsonify(mm.list_models())
+
+@app.post("/upload")
+def api_upload_model():
+    data = request.json
+    filePath = data["FilePath"]
+    modelName = data["ModelName"]
+    print("File path is now ", filePath, flush=True)
+    upload_model(file_path=filePath, model_name=modelName)
+    return jsonify({"status": "ok", "received_path":1})
 
 @app.post("/delete")
 def api_delete_model():
