@@ -37,8 +37,7 @@ def list_models():
     for m in models:
         print(f" {m['name']} | Created: {m['created_at']} | Algorithm: {m['algorithm']}")
 
-def delete():
-    model_name = input("Enter model name to delete: ")
+def delete(model_name):
     mm.delete_model(model_name)
 
 def analytics_menu():

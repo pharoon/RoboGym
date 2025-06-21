@@ -1,14 +1,12 @@
-import React from 'react'
+import { useState } from 'react'
 import './HomePage.css'
 import RoboGymLogo from './RoboticARm.png'
 import { useNavigate } from 'react-router-dom'
+import DeleteModel from '../Modals/DeleteModel'
 const HomePage = () => {
   const navigate = useNavigate()
-  // const initalizeServer = ()=>{
-  //   fetch('http://localhost:5000/initialize', {
-  //     method: 'post'
-  //   }).catch((e) =>{console.warn("Failed to initalize ", e)}).then((e) => {console.log(e)})
-  // }
+  const [showDeleteModel, setShowDeleteModel] = useState<boolean>(true)
+  
   return (
     <div className="HomePage">
       <div className="HomrPage_Header">
@@ -29,12 +27,13 @@ const HomePage = () => {
         <button onClick={()=>{ navigate("/Test")}}>
           Test a model
         </button>
-         <button onClick={()=>{}}>
-          initalize
+         <button onClick={()=>{ setShowDeleteModel(true)}}>
+          Delete Model
         </button>
 
         <button onClick={() => {}}>Select Existing Project</button>
       </div>
+      <DeleteModel showDeleteModal={showDeleteModel} setShowdeleteModal={setShowDeleteModel}/>
     </div>
   )
 }
