@@ -45,11 +45,11 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
 
 def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="pick_and_place"):
-    print( f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
+    yield( f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
 
     task_class = TASK_MAP.get(task_name)
     if not task_class:
-        print( f"data: ❌ Task '{task_name}' not found.\n\n")
+        yield( f"data: Task '{task_name}' not found.\n\n")
         raise ValueError(f"Task '{task_name}' not found.")
 
     from simulation.robotic_arm_env import RoboticArmEnv
@@ -65,12 +65,12 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
     model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
     
     if os.path.exists(model_path):
-        print(f"data: 🔄 Found existing model at {model_path}. Loading and continuing training...\n\n")
+        yield(f"data: Found existing model at {model_path}. Loading and continuing training...\n\n")
         model = PPO.load(model_path, env=env, tensorboard_log=LOGS_DIR)
         
         
     else:
-        print(f"data: 🚀 No existing model found. Starting fresh training...\n\n")
+        yield(f"data: No existing model found. Starting fresh training...\n\n")
         model = PPO(
             "MlpPolicy",
             env,
@@ -99,16 +99,16 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
     model.save(final_model_path)
     mm.save_model(model, model_name)
 
-    print( f"data: ✅ Training complete. Model saved at {final_model_path}\n\n")
+    yield( f"data: Training complete. Model saved at {final_model_path}\n\n")
     env.close()
     return final_model_path
 
 def test_model(model, task_name: str, episodes: int = 5):
     if task_name not in TASK_MAP:
-        print( f"data: ❌ Unknown task: {task_name}\n\n")
+        yield( f"data:Unknown task: {task_name}\n\n")
         return
 
-    print( f"data: 🛠️ Setting up environment for task '{task_name}'\n\n")
+    yield( f"data: Setting up environment for task '{task_name}'\n\n")
 
     env = RoboticArmEnv(render=True)
     task = PickAndPlaceTask(env)
@@ -122,8 +122,8 @@ def test_model(model, task_name: str, episodes: int = 5):
         done = False
         ep_reward = 0
         # task.switch_tables = random.choice([True, False])
-        print( f"data: 🎬 Starting episode {episode + 1}/{episodes} with task switch={task.switch_tables}\n\n")
-        print( f"data: 🎬 Episode {episode + 1} started...\n\n")
+        yield( f"data: Starting episode {episode + 1}/{episodes} with task switch={task.switch_tables}\n\n")
+        yield( f"data: Episode {episode + 1} started...\n\n")
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -131,10 +131,10 @@ def test_model(model, task_name: str, episodes: int = 5):
             ep_reward += reward
             time.sleep(1. / 30.)  
 
-        print( f"data: ✅ Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n")
+        yield( f"data: Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n")
         total_rewards.append(ep_reward)
 
     env.close()
 
     avg_reward = sum(total_rewards) / len(total_rewards)
-    print( f"data: 📊 Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n")
+    print( f"data: Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n")

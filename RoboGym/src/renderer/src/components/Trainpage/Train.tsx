@@ -11,6 +11,7 @@ const Train = () => {
   const navigate = useNavigate()
   const startTraining = () => {
     if (!modelName || !TimeSteps || !Task) return
+    setIsTraining(true)
     const eventSource = new EventSource(
       `http://localhost:5000/train?model_name=${modelName}&timesteps=${TimeSteps}&task_number=${Task}`
     )
@@ -20,16 +21,19 @@ const Train = () => {
     }
 
     eventSource.addEventListener('end', () => {
+      console.warn("What is happeneing ? ")
       eventSource.close()
       setIsTraining(false)
     })
 
     eventSource.onerror = (err) => {
+    if (isTraining) {
       console.error('Training error:', err)
-      setTrainigLogs((prev) => prev + '\n🚨 Training connection error.')
-      eventSource.close()
+      setTrainigLogs((prev) => prev + '\nTraining connection error.')
       setIsTraining(false)
     }
+    eventSource.close()
+  }
   }
   return (
     <div className="RoboGym-Train">

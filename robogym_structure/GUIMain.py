@@ -20,7 +20,9 @@ def initialize():
 
 def train(model_name, timesteps, task_number):
     task_name = TASK_CHOICES[task_number]
+    yield "data: My name is omar\n\n"
     yield from train_model(timesteps, model_name, task_name)
+    yield "data:\n\n"  # <-- this dummy message helps flush the stream
     yield "event: end\ndata: done\n\n"
 
 def test(RL_model, task_name, episodes):

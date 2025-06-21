@@ -40,12 +40,12 @@ def api_train():
         return "Invalid parameter types", 400
 
     def event_stream():
-        yield "data: yarab"
+        yield "data: 🟢 Training started...\n\n"
         try:
             yield from train_model_func(model_name, timesteps, task_number)
         except Exception as e:
             yield f"data: ❌ Error: {str(e)}\n\n"
-            yield "event: end\ndata: done\n\n"
+            yield "event: end\ndata: failed\n\n"
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
