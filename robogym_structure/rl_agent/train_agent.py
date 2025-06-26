@@ -3,10 +3,13 @@ from stable_baselines3 import PPO
 from simulation.robotic_arm_env import RoboticArmEnv
 from stable_baselines3.common.callbacks import BaseCallback
 from model_manager import manager as mm  
-from database import models as db 
+
 from tasks.pick_and_place import PickAndPlaceTask
 import time
-import random
+from typing import Optional
+import io
+import sys
+
 TASK_MAP = {
     "pick_and_place": PickAndPlaceTask,
 }
@@ -22,21 +25,19 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
     """
     Custom callback to save the best model based on training reward.
     """
-    def __init__(self, check_freq: int, save_path: str,model_name: str, verbose=1, ):
+    def __init__(self, check_freq: int, save_path: str, model_name: str,verbose=1):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.save_path = save_path
         self.best_mean_reward = -float("inf")
         self.model_name = model_name
+        
 
     def _on_step(self) -> bool:
-
         if self.n_calls % self.check_freq == 0:
-            
             if len(self.model.ep_info_buffer) > 0:
                 mean_reward = sum([ep["r"] for ep in self.model.ep_info_buffer]) / len(self.model.ep_info_buffer)
-                db.log_training(self.model_name, mean_reward)
-
+                print(f"REWARD_LOG::{self.model_name}::{mean_reward}::{self.num_timesteps}", flush=True)
                 if mean_reward > self.best_mean_reward:
                     self.best_mean_reward = mean_reward
                     print("New best reward! Saving model...")
@@ -44,31 +45,30 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 
-def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="pick_and_place"):
-    yield( f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
+def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="pick_and_place", model_path=None):
+    yield(f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
 
     task_class = TASK_MAP.get(task_name)
     if not task_class:
-        yield( f"data: Task '{task_name}' not found.\n\n")
+        yield(f"data: Task '{task_name}' not found.\n\n")
         raise ValueError(f"Task '{task_name}' not found.")
-
-    from simulation.robotic_arm_env import RoboticArmEnv
-    from stable_baselines3 import PPO
-    from stable_baselines3.common.callbacks import BaseCallback
-    import os
 
     dummy_env = RoboticArmEnv()  
     task_instance = task_class(dummy_env)
     env = RoboticArmEnv(task=task_instance, render=False)
 
     task_instance.env = env  
-    model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
+    
+    # Use custom path if provided, otherwise use default
+    if model_path is None:
+        model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
+    
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
     
     if os.path.exists(model_path):
         yield(f"data: Found existing model at {model_path}. Loading and continuing training...\n\n")
         model = PPO.load(model_path, env=env, tensorboard_log=LOGS_DIR)
-        
-        
     else:
         yield(f"data: No existing model found. Starting fresh training...\n\n")
         model = PPO(
@@ -89,26 +89,35 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm",task_name="p
 
     save_callback = SaveOnBestTrainingRewardCallback(
         check_freq=10,
-        save_path=os.path.join(MODELS_DIR, model_name),
+        save_path=os.path.splitext(model_path)[0],  # Remove .zip extension
         model_name=model_name
     )
+    # Save original stdout
+    original_stdout = sys.stdout
+    sys.stdout = io.StringIO()  # Redirect stdout
 
-    model.learn(total_timesteps=total_timesteps, callback=save_callback)
+    try:
+        model.learn(total_timesteps=total_timesteps, callback=save_callback)
+        output = sys.stdout.getvalue()
+    finally:
+        sys.stdout = original_stdout
 
-    final_model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
-    model.save(final_model_path)
-    mm.save_model(model, model_name)
+    for line in output.splitlines():
+        yield f"data: {line}\n\n"
 
-    yield( f"data: Training complete. Model saved at {final_model_path}\n\n")
+    model.save(model_path)
+    mm.save_model(model, model_name, model_path=model_path)
+
+    yield(f"data: Training complete. Model saved at {model_path}\n\n")
     env.close()
-    return final_model_path
+    return model_path
 
-def test_model(model, task_name: str, episodes: int = 5):
+def test_model(model, task_name: str, episodes: int = 5, stream: bool = False):
     if task_name not in TASK_MAP:
-        yield( f"data:Unknown task: {task_name}\n\n")
+        yield(f"data:Unknown task: {task_name}\n\n")
         return
 
-    yield( f"data: Setting up environment for task '{task_name}'\n\n")
+    yield(f"data: Setting up environment for task '{task_name}'\n\n")
 
     env = RoboticArmEnv(render=True)
     task = PickAndPlaceTask(env)
@@ -121,9 +130,8 @@ def test_model(model, task_name: str, episodes: int = 5):
         obs = env.reset()
         done = False
         ep_reward = 0
-        # task.switch_tables = random.choice([True, False])
-        yield( f"data: Starting episode {episode + 1}/{episodes} with task switch={task.switch_tables}\n\n")
-        yield( f"data: Episode {episode + 1} started...\n\n")
+        yield(f"data: Starting episode {episode + 1}/{episodes} with task switch={task.switch_tables}\n\n")
+        yield(f"data: Episode {episode + 1} started...\n\n")
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -131,10 +139,10 @@ def test_model(model, task_name: str, episodes: int = 5):
             ep_reward += reward
             time.sleep(1. / 30.)  
 
-        yield( f"data: Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n")
+        yield(f"data: Episode {episode + 1} complete — Total Reward: {ep_reward:.2f}\n\n")
         total_rewards.append(ep_reward)
 
     env.close()
-
     avg_reward = sum(total_rewards) / len(total_rewards)
-    print( f"data: Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n")
+    yield(f"data: Average Reward over {episodes} episodes: {avg_reward:.2f}\n\n")
+

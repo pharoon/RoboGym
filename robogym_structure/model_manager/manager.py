@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 from stable_baselines3 import PPO
 
 MODELS_DIR = "trained_models"
@@ -35,54 +35,68 @@ def list_models() -> List[Dict]:
     return [{"name": name, **details} for name, details in metadata.items()]
 
 
-def save_model(model, model_name: str, algorithm="PPO"):
+def save_model(model, model_name: str, algorithm="PPO", model_path: Optional[str] = None):
     """
     Saves the model and its metadata.
     """
-    filename = f"{model_name}.zip"
-    path = os.path.join(MODELS_DIR, filename)
-    model.save(path)
+    if model_path is None:
+        model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    
+    # Save the model
+    model.save(model_path)
 
     metadata = _load_metadata()
     metadata[model_name] = {
-        "filename": filename,
+        "filename": os.path.basename(model_path),
         "algorithm": algorithm,
         "created_at": datetime.now().isoformat(),
-        "path": path
+        "path": model_path
     }
     _save_metadata(metadata)
     print(f"[] Model '{model_name}' saved and registered.")
 
 
-def load_model(model_name: str):
-    print("model name is now ", model_name, flush=True)
+def load_model(model_name: str, model_path: Optional[str] = None):
     """
     Loads the model by name.
     """
+    if model_path:
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found at: {model_path}")
+        return PPO.load(model_path)
+    
     metadata = _load_metadata()
-    # print("metadata is now ", metadata, flush=True)
-    # print("metadata[omar]", metadata["Omar"])
     if model_name not in metadata:
         raise FileNotFoundError(f"No metadata found for model: {model_name}")
 
-    model_path = metadata[model_name]["path"]
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found at: {model_path}")
+    default_path = metadata[model_name]["path"]
+    if not os.path.exists(default_path):
+        raise FileNotFoundError(f"Model file not found at: {default_path}")
 
-    return PPO.load(model_path)
+    return PPO.load(default_path)
 
 
-def delete_model(model_name: str):
+def delete_model(model_name: str, model_path: Optional[str] = None):
     """
     Deletes a saved model and updates the metadata.
     """
-    metadata = _load_metadata()
-    if model_name in metadata:
-        model_path = metadata[model_name]["path"]
+    if model_path:
         if os.path.exists(model_path):
             os.remove(model_path)
+            print(f"[] Model file deleted at: {model_path}")
+        else:
+            print(f"[!] Model file not found at: {model_path}")
+    
+    metadata = _load_metadata()
+    if model_name in metadata:
+        default_path = metadata[model_name]["path"]
+        if not model_path and os.path.exists(default_path):
+            os.remove(default_path)
         del metadata[model_name]
         _save_metadata(metadata)
-        print(f"[] Model '{model_name}' deleted.")
+        print(f"[] Model '{model_name}' metadata deleted.")
     else:
-        print(f"[!] Model '{model_name}' not found.")
+        print(f"[!] Model '{model_name}' not found in metadata.")
