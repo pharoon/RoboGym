@@ -1,48 +1,30 @@
-.ModelTest, .TaskTest, .EpisodeTest{
-    border-radius: 5px;
-    padding: 2px;
-    &:focus{
-        outline: none;
-    }
-}
-
-label{
-    font-size: 15px;
-}
-
-.test-container {
+.analytics-container {
   padding: 2rem;
   height: 100%;
-  display: grid;
-  grid-template-columns: minmax(300px, 400px) 1fr;
-  gap: 2rem;
   animation: fadeIn 0.5s ease-out;
 }
 
-.test-card {
-  padding: 2rem;
-  border-radius: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  height: fit-content;
-  animation: cardFloat 0.5s ease-out;
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  height: 100%;
 }
 
-.logs-card {
+.analytics-card {
   padding: 2rem;
   border-radius: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  animation: cardFloat 0.5s ease-out 0.2s;
+  animation: cardFloat 0.5s ease-out;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .card-header .material-icons {
@@ -60,12 +42,6 @@ label{
   -webkit-text-fill-color: transparent;
 }
 
-.form-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -80,8 +56,7 @@ label{
   letter-spacing: 0.5px;
 }
 
-.select-input,
-.number-input {
+.select-input {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.5rem;
@@ -89,9 +64,6 @@ label{
   color: var(--text-primary);
   font-size: 1rem;
   transition: all 0.3s ease;
-}
-
-.select-input {
   cursor: pointer;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -100,11 +72,10 @@ label{
   padding-right: 2.5rem;
 }
 
-.select-input:focus,
-.number-input:focus {
+.select-input:focus {
   outline: none;
   border-color: var(--primary-color);
-  background: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.1);
   transform: translateY(-2px);
 }
 
@@ -129,6 +100,7 @@ label{
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: auto;
 }
 
 .action-button:hover:not(:disabled) {
@@ -142,83 +114,8 @@ label{
   background: rgba(255, 255, 255, 0.1);
 }
 
-.action-button.loading {
-  position: relative;
-  cursor: not-allowed;
-}
-
-.action-button.loading .material-icons {
-  animation: spin 1s linear infinite;
-}
-
-.logs-content {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  overflow: auto;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.logs-content pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  color: var(--text-primary);
-}
-
-.empty-logs {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  color: var(--text-secondary);
-}
-
-.empty-logs .material-icons {
-  font-size: 3rem;
-  opacity: 0.5;
-}
-
-.empty-logs p {
-  font-size: 1rem;
-  opacity: 0.7;
-}
-
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(4px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s linear infinite;
-}
-
-.loading-overlay p {
-  color: var(--text-primary);
-  font-weight: 500;
+.action-button .material-icons {
+  font-size: 1.25rem;
 }
 
 /* Animations */
@@ -242,10 +139,4 @@ label{
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+} 

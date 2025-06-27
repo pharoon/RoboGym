@@ -1,91 +1,185 @@
 /* src/App.css */
 
 .app-bg {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--primary-color) 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+}
 
-  height: 100vh;
-  width: 100vw;
-  background-color: #1d1d2e;
+.app-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(5, 150, 105, 0.15) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.welcome-box {
+  text-align: center;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-box h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(to right, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+.welcome-box p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  max-width: 500px;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.cardWrapper {
+  width: 100%;
+  max-width: 400px;
+  perspective: 1000px;
+  position: relative;
+  z-index: 1;
 }
 
 .card {
-  background-color: #2e2e3e;
-  padding: 2rem;
+  background: rgba(31, 41, 55, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15);
   border-radius: 1rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-  width: 300px;
-  color: white;
-  transition: all 0.3s ease-in-out;
+  padding: 2rem;
+  transform-style: preserve-3d;
+  animation: cardFloat 0.8s ease-out;
 }
 
-.fade-in {
-  animation: fadeIn 0.5s ease;
+.form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.form-container h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  text-align: center;
+  background: linear-gradient(to right, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .input-group {
+  position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
-  background: #3e3e5e;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.5rem;
-  padding: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.input-group:focus-within {
+  border-color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
 }
 
 .input-group svg {
-  margin-right: 0.5rem;
-  color: #bbb;
+  color: var(--text-secondary);
+  font-size: 1.2rem;
 }
 
 .input-group input {
+  width: 100%;
   background: transparent;
   border: none;
+  color: var(--text-primary);
+  font-size: 1rem;
   outline: none;
-  color: white;
-  width: 100%;
+}
+
+.input-group input::placeholder {
+  color: var(--text-secondary);
 }
 
 .primary-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background: #5a78ff;
-  border: none;
-  border-radius: 0.5rem;
+  background: linear-gradient(135deg, var(--primary-color), #60a5fa);
   color: white;
-  font-weight: bold;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .primary-btn:hover {
-  background: #7a98ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .switch-link {
+  color: var(--text-secondary);
   text-align: center;
-  margin-top: 1rem;
-  color: #aaa;
   cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.switch-link:hover {
+  color: var(--text-primary);
   text-decoration: underline;
-  font-size: 0.9rem;
 }
 
-.welcome-box{
-  height: 20vh;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+/* Animations */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.cardWrapper{
-  height: 80vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) rotateX(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+  }
 }
 
