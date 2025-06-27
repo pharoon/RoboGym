@@ -1,6 +1,6 @@
 # models.py
 from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -11,15 +11,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()   
 
-# PostgreSQL configuration
-POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "KiNg504$")
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.getenv("POSTGRES_DB", "robogym")
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{'KiNg504$'}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
+SQLALCHEMY_DATABASE_URL = f"postgresql://postgres.xljntaujspiljiczjzzh:3aCXHe0fDQx0gzNL@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
 # SQLAlchemy setup
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -97,7 +91,6 @@ class TrainSession(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     timesteps = Column(Integer, nullable=False)
     total_time = Column(Float, nullable=False)
-    logs_path = Column(String, nullable=False)
     mean_reward = Column(Float)  # Final mean reward
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
@@ -139,18 +132,17 @@ def get_user_by_username(username: str):
         return db.query(User).filter(User.username == username).first()
     finally:
         db.close()
+def get_user_by_email(email: str):
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.email == email).first()
+    finally:
+        db.close()
 
 def get_user_by_id(user_id: int):
     db = SessionLocal()
     try:
         return db.query(User).filter(User.id == user_id).first()
-    finally:
-        db.close()
-
-def get_user_by_email(email: String):
-    db = SessionLocal()
-    try:
-        return db.query(User).filter(User.email == email).first()
     finally:
         db.close()
 
@@ -180,9 +172,121 @@ def get_user_models(user_id: int):
     finally:
         db.close()
 
+def get_trained_model_by_name_and_user(user_id: int, model_name: str):
+    """
+    Fetch a trained model by its name for a specific user.
+    Returns the model if found, None otherwise.
+    """
+    db = SessionLocal()
+    try:
+        return (
+            db.query(TrainedModel)
+            .filter(TrainedModel.name == model_name)
+            .filter(TrainedModel.user_id == user_id)
+            .first()
+        )
+    finally:
+        db.close()
 
+def delete_trained_model(user_id: int, model_name: str) -> bool:
+    """
+    Delete a trained model for a specific user by model name.
+    Returns True if deletion was successful, False otherwise.
+    """
+    db = SessionLocal()
+    try:
+        model = (
+            db.query(TrainedModel)
+            .filter(TrainedModel.name == model_name)
+            .filter(TrainedModel.user_id == user_id)
+            .first()
+        )
+
+        if not model:
+            print(f"Model '{model_name}' not found for user ID {user_id}")
+            return False
+
+        db.delete(model)
+        db.commit()
+        return True
+
+    except Exception as e:
+        print(f"Error deleting model '{model_name}': {str(e)}")
+        db.rollback()
+        return False
+
+    finally:
+        db.close()
+
+def updateModelPath(model_id: int, new_model_path: str):
+    """Update the model path for a specific trained model."""
+    db = SessionLocal()
+    try:
+        model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+        if not model:
+            print(f"Model with ID {model_id} not found.")
+            return False
+
+        model.model_path = new_model_path
+        db.commit()
+        return True
+
+    except Exception as e:
+        print(f"Error updating model path for ID {model_id}: {str(e)}")
+        db.rollback()
+        return False
+
+    finally:
+        db.close()
+
+def model_rename(user_id: int, old_name: str, new_name: str) -> bool:
+    """
+    Rename a trained model for a specific user.
+    Returns True if the rename was successful, False otherwise.
+    """
+    if not new_name:
+            print("New model name cannot be empty.")
+            return False
+    
+    db = SessionLocal()
+    try:
+        model = (
+            db.query(TrainedModel)
+            .filter(TrainedModel.name == old_name)
+            .filter(TrainedModel.user_id == user_id)
+            .first()
+        )
+
+        if not model:
+            print(f"Model '{old_name}' not found for user ID {user_id}")
+            return False
+        # Check if the new name already exists for this user
+        existing_model = (
+            db.query(TrainedModel)
+            .filter(TrainedModel.name == new_name)
+            .filter(TrainedModel.user_id == user_id)
+            .first()
+        )
+        if existing_model:
+            print(f"Model '{new_name}' already exists for user ID {user_id}")
+            return False
+        
+        
+        model.name = new_name
+        db.commit()
+        return True
+
+    except Exception as e:
+        print(f"Error renaming model '{old_name}': {str(e)}")
+        db.rollback()
+        return False
+
+    finally:
+        db.close()
+
+     
 # TrainSession utilities
-def create_train_session(model_id, user_id, timesteps, total_time, logs_path, mean_reward=None):
+def create_train_session(model_id, user_id, timesteps, total_time, mean_reward=None):
     """Create or complete a training session."""
     db = SessionLocal()
     try:
@@ -200,7 +304,6 @@ def create_train_session(model_id, user_id, timesteps, total_time, logs_path, me
             # Update the existing session with final values
             current_session.timesteps = int(timesteps)
             current_session.total_time = float(total_time)
-            current_session.logs_path = str(logs_path)
             if mean_reward is not None:
                 current_session.mean_reward = float(mean_reward)
             current_session.completed_at = now
@@ -211,7 +314,6 @@ def create_train_session(model_id, user_id, timesteps, total_time, logs_path, me
                 user_id=int(user_id),
                 timesteps=int(timesteps),
                 total_time=float(total_time),
-                logs_path=str(logs_path),
                 mean_reward=float(mean_reward) if mean_reward is not None else None,
                 started_at=now,
                 completed_at=now
@@ -266,7 +368,6 @@ def log_training(model_name: str, mean_reward: float, current_timestep: int, use
                 user_id=user_id,
                 timesteps=0,  # Will be updated when training completes
                 total_time=0.0,  # Will be updated when training completes
-                logs_path=f"logs/user_{user_id}/{model_name}",
                 started_at=datetime.utcnow()
             )
             db.add(current_session)
@@ -348,23 +449,6 @@ def fetch_logs(model_name: str, user_id: int):
     finally:
         db.close()
 
-import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
-def create_db_if_not_exists():
-    conn = psycopg2.connect(dbname="postgres", user=POSTGRES_USER, password=POSTGRES_PASSWORD, host=POSTGRES_HOST)
-    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    cur = conn.cursor()
-
-    cur.execute("SELECT 1 FROM pg_database WHERE datname='robogym'")
-    exists = cur.fetchone()
-    if not exists:
-        print(" RoboGym database has been created successfully")
-        cur.execute("CREATE DATABASE robogym")
-
-    cur.close()
-    conn.close()
-
 if __name__ == "__main__":
     init_db()
-    print("✅ Tables created successfully.", flush=True)
+    print("✅ Tables created successfully.")

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import time
-
+from FileStorage import upload_to_storage, delete_from_storage
 # Load environment variables from Credentials.env
 load_dotenv('Credentials.env')
 
@@ -21,8 +21,7 @@ CORS(app)  # Allows calls from Electron frontend
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
 app.config['JWT_EXPIRATION_DELTA'] = timedelta(hours=int(os.getenv('JWT_EXPIRATION_HOURS', '24')))
-db.create_db_if_not_exists()
-db.init_db()
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -132,15 +131,16 @@ def api_train():
 
     # Create user-specific directories if they don't exist
     user_models_dir = f"trained_models/user_{currUserID}"
-    user_logs_dir = f"logs/user_{currUserID}"
+    # user_logs_dir = f"logs/user_{currUserID}"
     os.makedirs(user_models_dir, exist_ok=True)
-    os.makedirs(user_logs_dir, exist_ok=True)
+    # os.makedirs(user_logs_dir, exist_ok=True)
 
+    local_model_path = f"{user_models_dir}/{model_name}.zip"
     # Create a trained model record in the database
     try:
         trained_model = db.create_trained_model(
             name=model_name,
-            model_path=f"{user_models_dir}/{model_name}.zip",
+            model_path="placeholder",
             algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
             robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
             user_id=currUserID
@@ -148,7 +148,7 @@ def api_train():
     except Exception as e:
         return jsonify({'message': f'Error creating model record: {str(e)}'}), 500
 
-    start_time = time.time()
+    
     current_timestep = 0
 
     def event_stream():
@@ -162,7 +162,7 @@ def api_train():
                 model_name=model_name,
                 timesteps=timesteps,
                 task_number=task_number,
-                model_path=f"{user_models_dir}/{model_name}.zip"
+                model_path=local_model_path
             ):
                 # Remove 'data: ' prefix and process log lines
                 line = event.strip().removeprefix("data: ").strip()
@@ -173,12 +173,12 @@ def api_train():
                         mean_reward = float(reward_str)
                         current_timestep = int(timestep_str)
 
-                        db.log_training(
-                            model_name=logged_model_name,
-                            mean_reward=mean_reward,
-                            current_timestep=current_timestep,
-                            user_id=currUserID
-                        )
+                        # db.log_training(
+                        #     model_name=logged_model_name,
+                        #     mean_reward=mean_reward,
+                        #     current_timestep=current_timestep,
+                        #     user_id=currUserID
+                        # )
                     except (ValueError, IndexError):
                         pass  # Ignore malformed reward logs
 
@@ -186,14 +186,15 @@ def api_train():
 
             # Save the final training session
             total_time = time.time() - start_time
-            logs_path = f"{user_logs_dir}/{model_name}"
-
+            remote_model_path = f"user_{currUserID}/{model_name}.zip"
+            model_url = upload_to_storage("models", local_model_path, remote_model_path)
+            db.updateModelPath(trained_model.id, model_url)
+        
             db.create_train_session(
                 model_id=trained_model.id,
                 user_id=currUserID,
                 timesteps=timesteps,
                 total_time=total_time,
-                logs_path=logs_path,
                 mean_reward=mean_reward
             )
 
@@ -259,6 +260,9 @@ def api_upload_model():
         return jsonify({"status": "error", "message": "Missing FilePath or ModelName"}), 400
 
     try:
+        remote_model_path = f"user_{currUserID}/{modelName}.zip"
+        model_url = upload_to_storage("models", filePath, remote_model_path)
+
         # Create user-specific directory if it doesn't exist
         user_models_dir = f"trained_models/user_{currUserID}"
         os.makedirs(user_models_dir, exist_ok=True)
@@ -270,9 +274,9 @@ def api_upload_model():
         # Create database record for the uploaded model
         trained_model = db.create_trained_model(
             name=modelName,
-            model_path=target_path,
+            model_path=model_url,
             algorithm=db.AlgorithmType.PPO,  # Default to PPO for uploaded models
-            robotic_arm=db.RoboticArmType.PANDA,  # Default to PANDA for uploaded models
+            robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for uploaded models
             user_id=currUserID
         )
         
@@ -383,23 +387,25 @@ def api_delete_model():
             
         if not model_name or not isinstance(model_name, str):
             return jsonify({"status": "error", "message": "Valid model name is required"}), 400
+        try:
+            # Check if the model exists in the database for the current user
+            trained_model = db.get_trained_model_by_name_and_user(currUserID, model_name)
+            if not trained_model:
+                return jsonify({"status": "error", "message": "Model not found"}), 404
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Error fetching model: {str(e)}"}), 500
         
-        # First find the model in the database
-        user_models = db.get_user_models(currUserID)
-        if not user_models:
+        
+        if not (db.delete_trained_model(currUserID, model_name)):
+            return jsonify({"status": "error", "message": "Failed to delete model from database"}), 500
+
+        cloud_deleted = delete_from_storage("models", f"user_{currUserID}/{model_name}.zip")
+
+        if not cloud_deleted:
             return jsonify({
                 "status": "error",
-                "message": "No models found for user"
-            }), 404
-            
-        model_to_delete = next((model for model in user_models if model.name == model_name), None)
-        
-        if not model_to_delete:
-            return jsonify({
-                "status": "error",
-                "message": "Model not found or you don't have permission to delete it"
-            }), 404
-        
+                "message": "Failed to delete model from cloud storage"
+            }), 500
         # Delete the model file from user-specific directory
         user_models_dir = f"trained_models/user_{currUserID}"
         delete_model_func(model_name, model_path=f"{user_models_dir}/{model_name}.zip")

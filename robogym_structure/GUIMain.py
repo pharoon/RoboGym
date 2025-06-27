@@ -14,7 +14,7 @@ TASK_CHOICES = {
 
 def initialize():
     print(" Initializing RoboGym environment...")
-    db.init_db()
+    # db.init_db() not needed for cloud database
     os.makedirs("trained_models", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
     print(" Directories and database initialized.")
