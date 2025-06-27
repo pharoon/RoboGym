@@ -1,0 +1,91 @@
+/* src/App.css */
+
+.app-bg {
+
+  height: 100vh;
+  width: 100vw;
+  background-color: #1d1d2e;
+}
+
+.card {
+  background-color: #2e2e3e;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  width: 300px;
+  color: white;
+  transition: all 0.3s ease-in-out;
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  background: #3e3e5e;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+}
+
+.input-group svg {
+  margin-right: 0.5rem;
+  color: #bbb;
+}
+
+.input-group input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #5a78ff;
+  border: none;
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.primary-btn:hover {
+  background: #7a98ff;
+}
+
+.switch-link {
+  text-align: center;
+  margin-top: 1rem;
+  color: #aaa;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+.welcome-box{
+  height: 20vh;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.cardWrapper{
+  height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+

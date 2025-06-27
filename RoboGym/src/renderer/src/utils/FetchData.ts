@@ -1,6 +1,14 @@
-export const GetModels = async () => {
+export const GetModels = async (currUserID: string) => {
   try {
-    const response = await fetch("http://localhost:5000/models");
+    const response = await fetch("http://localhost:5000/models", {
+      method:"POST",
+       headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currUserID
+        })
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

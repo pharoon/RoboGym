@@ -3,23 +3,21 @@ import { Card, CardContent, Typography, Grid, Box, Button } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { toast, ToastContainer } from 'react-toastify'
-const AllModel = () => {
-  const [Models, setModels] = useState<any[]>([])
-  const navigate = useNavigate() // To navigate to home page
+import { AllDataProps, Model } from '@renderer/utils/interfaces'
+import { GetModels } from '@renderer/utils/FetchData'
 
+const AllModel: React.FC<AllDataProps> = (props) => {
+  const { userProfile } = props
+  const [Models, setModels] = useState<Model[]>([])
+  const navigate = useNavigate()
+  const fetchModels = async () => {
+    const models: Model[] = await GetModels(userProfile.user_id ?? '-1')
+    setModels(models)
+    console.log('Models are now ', models)
+  }
   useEffect(() => {
     fetchModels()
   }, [])
-
-  const fetchModels = () => {
-    fetch('http://localhost:5000/models')
-      .then((response) => {
-        if (!response.ok) throw new Error('Network response was not ok')
-        return response.json()
-      })
-      .then((data) => setModels(data))
-      .catch((error) => console.error('There was a problem with the fetch operation:', error))
-  }
 
   // Handle delete model
   const handleDelete = (modelName: string) => {
@@ -28,7 +26,7 @@ const AllModel = () => {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ model_name: modelName })
+      body: JSON.stringify({ model_name: modelName, currUserID:userProfile.user_id })
     })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to delete model')
@@ -36,13 +34,13 @@ const AllModel = () => {
       })
       .then(() => {
         fetchModels()
-        toast.success("Model has been deleted")
+        toast.success('Model has been deleted')
       })
       .catch((err) => console.error('Error deleting model:', err))
   }
 
   return (
-    <div style={{ background: '#1d1d2e', height: '100vh', width: '100vw', overflow:"auto" }}>
+    <div style={{ background: '#1d1d2e', height: '100vh', width: '100vw', overflow: 'auto' }}>
       <Box textAlign="center" my={4}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           📦 Available AI Models
@@ -91,8 +89,12 @@ const AllModel = () => {
                   <Typography variant="h6" color="primary" gutterBottom>
                     {model.name}
                   </Typography>
-                  <Typography color="text.secondary">🗓 Created: {model.created_at}</Typography>
-                  <Typography color="text.secondary">⚙️ Algorithm: {model.algorithm}</Typography>
+                  <Typography color="text.secondary">📅 Created: {model.created_at}</Typography>
+                  <Typography color="text.secondary">🧠 Algorithm: {model.algorithm}</Typography>
+                  <Typography color="text.secondary">
+                    🤖 Robotic Arm: {model.robotic_arm}
+                  </Typography>
+                  <Typography color="text.secondary">📁 Model Path: {model.model_path}</Typography>
                 </CardContent>
                 <div
                   className="DeleteBtn__Wrapper"
@@ -114,9 +116,9 @@ const AllModel = () => {
       </Grid>
 
       <Box textAlign="center" mt={5}>
-        <button onClick={() => navigate('/')}>Return Back</button>
+        <button onClick={() => navigate('/HomePage')}>Return Back</button>
       </Box>
-      <ToastContainer position='bottom-left'/>
+      <ToastContainer position="bottom-left" />
     </div>
   )
 }

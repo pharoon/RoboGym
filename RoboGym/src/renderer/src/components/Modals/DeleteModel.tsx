@@ -1,21 +1,22 @@
 import React, { SetStateAction, useEffect, useState } from 'react'
 import './DeleteModel.css'
 import { Modal } from '@mui/material'
-interface DeleteModelProps {
-  showDeleteModal: boolean
-  setShowdeleteModal: React.Dispatch<SetStateAction<boolean>>
-}
+import { DeleteModelProps, Model } from '@renderer/utils/interfaces'
+import { GetModels } from '@renderer/utils/FetchData'
+import { toast } from 'react-toastify'
+
 const DeleteModel: React.FC<DeleteModelProps> = (props) => {
-  const { showDeleteModal, setShowdeleteModal } = props
+  const { showDeleteModal, setShowdeleteModal, userProfile } = props
   const [models, setModels] = useState<{ name: string }[]>([])
   const [selectedModel, setSelectedModel] = useState<string>()
 
   useEffect(() => {
-    fetch('http://localhost:5000/models')
-      .then((res) => res.json())
-      .then((data) => {
-        setModels(data)
-      })
+      const fetchModels = async () => {
+        const models: Model[] = await GetModels(userProfile.user_id ?? "-1");
+        setModels(models.map(({ name }) => ({ name })));
+      };
+    
+      fetchModels();
   }, [])
 
   const deleteModel = () => {
@@ -25,7 +26,9 @@ const DeleteModel: React.FC<DeleteModelProps> = (props) => {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ model_name: selectedModel })
+        body: JSON.stringify({ model_name: selectedModel, currUserID:userProfile.user_id })
+      }).then(()=>{
+        toast.success("Model has been deleted successfully")
       })
       setShowdeleteModal(false)
     }
@@ -48,7 +51,7 @@ const DeleteModel: React.FC<DeleteModelProps> = (props) => {
             setSelectedModel(e.target.value)
           }}
         >
-          <option>Choose Model</option>
+          <option hidden>Choose Model</option>
           {models.map(({ name }) => (
             <option value={name}>{name}</option>
           ))}

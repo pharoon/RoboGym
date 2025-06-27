@@ -61,6 +61,8 @@
     display: flex;
     justify-content: center;
     gap:5%;
+    row-gap: 20px;
+    flex-wrap: wrap;
 
     button{
         background-color: transparent;

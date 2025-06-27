@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from 'react'
 import './Train.css'
 import { useNavigate } from 'react-router-dom'
-const Train = () => {
+import { TrainProps } from '@renderer/utils/interfaces'
+
+
+const Train:React.FC<TrainProps> = (props) => {
+  const { userProfile } = props
+
   const [modelName, setModelName] = useState<string>()
   const [TimeSteps, setTimeSteps] = useState<string>()
   const [Task, setTask] = useState<number>()
   const [trainingLogs, setTrainigLogs] = useState<string>()
 
   const [isTraining, setIsTraining] = useState<boolean>(false)
+  console.log("UserPRofile is ", userProfile)
   const navigate = useNavigate()
   const startTraining = () => {
     if (!modelName || !TimeSteps || !Task) return
     setIsTraining(true)
     const eventSource = new EventSource(
-      `http://localhost:5000/train?model_name=${modelName}&timesteps=${TimeSteps}&task_number=${Task}`
+      `http://localhost:5000/train?model_name=${modelName}&timesteps=${TimeSteps}&task_number=${Task}&curr_user_id=${userProfile.user_id}`
     )
 
     eventSource.onmessage = (event) => {
@@ -82,7 +88,7 @@ const Train = () => {
           <button onClick={startTraining}>StartTrainig</button>
           <button
             onClick={() => {
-              navigate('/')
+              navigate('/HomePage')
             }}
           >
             Return Back

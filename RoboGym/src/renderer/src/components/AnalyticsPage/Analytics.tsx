@@ -12,8 +12,12 @@ import {
   Grid
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { AnalyticsProps, Model } from '@renderer/utils/interfaces';
+import { GetModels } from '@renderer/utils/FetchData';
 
-const AnalyticsComponent: React.FC = () => {
+const AnalyticsComponent: React.FC<AnalyticsProps> = ( props ) => {
+
+  const { userProfile } = props
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const [plotModel, setPlotModel] = useState('');
   const [compareModel1, setCompareModel1] = useState('');
@@ -21,12 +25,13 @@ const AnalyticsComponent: React.FC = () => {
   const navigate = useNavigate(); // <-- 👈 Hook to navigate
 
   useEffect(() => {
-    fetch('http://localhost:5000/models')
-      .then((res) => res.json())
-      .then((data) => {
-        setAvailableModels(data.map((m: any) => m.name));
-      });
-  }, []);
+      const fetchModels = async () => {
+         const models: Model[] = await GetModels(userProfile.user_id ?? '-1')
+         setAvailableModels(models.map(({name})=>(name)))
+         console.log('Models are now ', models)
+       }
+      fetchModels()
+    }, [])
 
   const handlePlotReward = () => {
     if (!plotModel) return;
@@ -36,7 +41,7 @@ const AnalyticsComponent: React.FC = () => {
          headers: {
           'Content-Type': 'application/json'
         },
-        body:JSON.stringify({"Model_Name": plotModel})
+        body:JSON.stringify({"Model_Name": plotModel, "currUserID":userProfile.user_id})
     })
 
   };
@@ -176,7 +181,7 @@ const AnalyticsComponent: React.FC = () => {
 
       {/* ⬅ Back Button */}
       <Box mt={5}>
-        <Button variant="outlined" color="inherit" onClick={() => navigate('/')}>
+        <Button variant="outlined" color="inherit" onClick={() => navigate('/HomePage')}>
           Return back
         </Button>
       </Box>

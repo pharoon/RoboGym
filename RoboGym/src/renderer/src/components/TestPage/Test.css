@@ -1,0 +1,11 @@
+.ModelTest, .TaskTest, .EpisodeTest{
+    border-radius: 5px;
+    padding: 2px;
+    &:focus{
+        outline: none;
+    }
+}
+
+label{
+    font-size: 15px;
+}

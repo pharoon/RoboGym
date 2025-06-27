@@ -1,5 +1,5 @@
 # flask_api.py
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, json, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model, GetModelRewards, compareModels
 from model_manager import manager as mm
@@ -21,9 +21,8 @@ CORS(app)  # Allows calls from Electron frontend
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
 app.config['JWT_EXPIRATION_DELTA'] = timedelta(hours=int(os.getenv('JWT_EXPIRATION_HOURS', '24')))
-
+db.create_db_if_not_exists()
 db.init_db()
-
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -66,6 +65,9 @@ def register():
     if db.get_user_by_username(data['username']):
         return jsonify({'message': 'Username already exists!'}), 400
     
+    if db.get_user_by_email(data["email"]):
+        return jsonify({"message" : "Email already exists!"}), 400
+
     try:
         user = db.create_user(
             username=data['username'],
@@ -93,32 +95,32 @@ def login():
     if not user or not user.check_password(data['password']):
         return jsonify({'message': 'Invalid username or password!'}), 401
     
-    token = jwt.encode({
-        'user_id': user.id,
-        'username': user.username,
-        'exp': datetime.utcnow() + app.config['JWT_EXPIRATION_DELTA']
-    }, app.config['SECRET_KEY'], algorithm="HS256")
+    # token = jwt.encode({
+    #     'user_id': user.id,
+    #     'username': user.username,
+    #     'exp': datetime.utcnow() + app.config['JWT_EXPIRATION_DELTA']
+    # }, app.config['SECRET_KEY'], algorithm="HS256")
     
     return jsonify({
-        'token': token,
+        # 'token': token,
         'user_id': user.id,
         'username': user.username,
         'email': user.email
     })
 
 @app.post("/initialize")
-@token_required
-def api_initialize(current_user):
+# @token_required
+def api_initialize():
     initialize()
     return jsonify({"status": "initialized"})
 
 @app.get("/train")
-@token_required
-def api_train(current_user):
+# @token_required
+def api_train():
     model_name = request.args.get("model_name")
     timesteps = request.args.get("timesteps")
     task_number = request.args.get("task_number")
-
+    currUserID = request.args.get('curr_user_id')
     if not model_name or not timesteps or not task_number:
         return "Missing parameters", 400
 
@@ -129,8 +131,8 @@ def api_train(current_user):
         return "Invalid parameter types", 400
 
     # Create user-specific directories if they don't exist
-    user_models_dir = f"trained_models/user_{current_user.id}"
-    user_logs_dir = f"logs/user_{current_user.id}"
+    user_models_dir = f"trained_models/user_{currUserID}"
+    user_logs_dir = f"logs/user_{currUserID}"
     os.makedirs(user_models_dir, exist_ok=True)
     os.makedirs(user_logs_dir, exist_ok=True)
 
@@ -141,7 +143,7 @@ def api_train(current_user):
             model_path=f"{user_models_dir}/{model_name}.zip",
             algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
             robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
-            user_id=current_user.id
+            user_id=currUserID
         )
     except Exception as e:
         return jsonify({'message': f'Error creating model record: {str(e)}'}), 500
@@ -158,8 +160,8 @@ def api_train(current_user):
         try:
             for event in train_model_func(
                 model_name=model_name,
-                total_timesteps=timesteps,
-                task_name=task_number,
+                timesteps=timesteps,
+                task_number=task_number,
                 model_path=f"{user_models_dir}/{model_name}.zip"
             ):
                 # Remove 'data: ' prefix and process log lines
@@ -175,7 +177,7 @@ def api_train(current_user):
                             model_name=logged_model_name,
                             mean_reward=mean_reward,
                             current_timestep=current_timestep,
-                            user_id=current_user.id
+                            user_id=currUserID
                         )
                     except (ValueError, IndexError):
                         pass  # Ignore malformed reward logs
@@ -188,7 +190,7 @@ def api_train(current_user):
 
             db.create_train_session(
                 model_id=trained_model.id,
-                user_id=current_user.id,
+                user_id=currUserID,
                 timesteps=timesteps,
                 total_time=total_time,
                 logs_path=logs_path,
@@ -201,11 +203,15 @@ def api_train(current_user):
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
-@app.get("/models")
-@token_required
-def api_list_models(current_user):
+@app.post("/models")
+# @token_required
+def api_list_models():
     # Get models for the current user from the database
-    user_models = db.get_user_models(current_user.id)
+    data = request.json
+
+    currUserID = data["currUserID"]
+    print("CurrUserID inside models is now ", currUserID, flush= True)
+    user_models = db.get_user_models(currUserID)
     
     if not user_models:
         return jsonify([])
@@ -237,21 +243,24 @@ def api_list_models(current_user):
     return jsonify(models_list)
 
 @app.post("/upload")
-@token_required
-def api_upload_model(current_user):
+# @token_required
+def api_upload_model():
     data = request.json
+    filePath = data.get("FilePath")
+    modelName = data.get("ModelName")
+    currUserID = data.get("currUserID")
+
+    print("Data is ", data, flush=True)
+    
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400
         
-    filePath = data.get("FilePath")
-    modelName = data.get("ModelName")
-    
     if not filePath or not modelName:
         return jsonify({"status": "error", "message": "Missing FilePath or ModelName"}), 400
 
     try:
         # Create user-specific directory if it doesn't exist
-        user_models_dir = f"trained_models/user_{current_user.id}"
+        user_models_dir = f"trained_models/user_{currUserID}"
         os.makedirs(user_models_dir, exist_ok=True)
         
         # First upload the model file to user-specific directory
@@ -264,7 +273,7 @@ def api_upload_model(current_user):
             model_path=target_path,
             algorithm=db.AlgorithmType.PPO,  # Default to PPO for uploaded models
             robotic_arm=db.RoboticArmType.PANDA,  # Default to PANDA for uploaded models
-            user_id=current_user.id
+            user_id=currUserID
         )
         
         return jsonify({
@@ -279,22 +288,22 @@ def api_upload_model(current_user):
         }), 500
 
 @app.post("/getRewards")
-@token_required
-def api_get_rewards(current_user):
+# @token_required
+def api_get_rewards():
     try:
         data = request.get_json(silent=True)
+        model_name = data["Model_Name"]
+        currUserID = data["currUserID"]
         if not data or 'Model_Name' not in data:
             return jsonify({"status": "error", "message": "Model name is required"}), 400
-
-        model_name = data["Model_Name"]
         
         # Get the model's training history from our database
-        logs = db.fetch_logs(model_name, current_user.id)
+        logs = db.fetch_logs(model_name, currUserID)
         if not logs:
             return jsonify({"status": "error", "message": "No training data found for this model"}), 404
 
         # Start the visualization process with user-specific paths
-        user_models_dir = f"trained_models/user_{current_user.id}"
+        user_models_dir = f"trained_models/user_{currUserID}"
         Process(target=GetModelRewards, args=(model_name, user_models_dir)).start()
         
         return jsonify({
@@ -309,7 +318,7 @@ def api_get_rewards(current_user):
         }), 500
 
 @app.post("/compareModels")
-@token_required
+# @token_required
 def api_compare_Models(current_user):
     try:
         data = request.get_json(silent=True)
@@ -362,19 +371,21 @@ def api_compare_Models(current_user):
         }), 500
 
 @app.post("/delete")
-@token_required
-def api_delete_model(current_user):
+# @token_required
+def api_delete_model():
     try:
         data = request.get_json(silent=True)
+        currUserID = data["currUserID"]
+        model_name = data["model_name"]
+        
         if not data or not isinstance(data, dict):
             return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
             
-        model_name = data.get("model_name")
         if not model_name or not isinstance(model_name, str):
             return jsonify({"status": "error", "message": "Valid model name is required"}), 400
         
         # First find the model in the database
-        user_models = db.get_user_models(current_user.id)
+        user_models = db.get_user_models(currUserID)
         if not user_models:
             return jsonify({
                 "status": "error",
@@ -390,7 +401,7 @@ def api_delete_model(current_user):
             }), 404
         
         # Delete the model file from user-specific directory
-        user_models_dir = f"trained_models/user_{current_user.id}"
+        user_models_dir = f"trained_models/user_{currUserID}"
         delete_model_func(model_name, model_path=f"{user_models_dir}/{model_name}.zip")
         
         # The database record will be automatically deleted due to cascade delete
@@ -402,17 +413,18 @@ def api_delete_model(current_user):
         }), 500
 
 @app.get("/test")
-@token_required
-def api_test(current_user):
+# @token_required
+def api_test():
     model_name = request.args.get("model")
     task_name = request.args.get("task")
     episodes = request.args.get("episodes", "1")
+    currUserID = request.args.get("currUserID")
 
     if not model_name or not task_name:
         return "Missing parameters", 400
 
     # Get user-specific model path
-    user_models_dir = f"trained_models/user_{current_user.id}"
+    user_models_dir = f"trained_models/user_{currUserID}"
 
     def event_stream():
         yield f"data: 🔧 Starting test for model={model_name}, task={task_name}, episodes={episodes}\n\n"

@@ -2,11 +2,24 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { WebSocketConnector } from './Utils/Websocket'
 import { spawn } from 'child_process'
 let pyProc;
 function createWindow(): void {
-  // Create the browser window.
+
+  const splashWindow = new BrowserWindow({
+    width: 850,
+    height: 500,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    center: true,
+    icon: path.join(__dirname, '../../src/Assets/RogoGymLogo.png'), 
+    resizable: false,
+    show: true,
+  });
+
+  splashWindow.loadFile(path.join(__dirname, '../../src/Assets/splashScreen/splash2.html'));
+
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
@@ -16,11 +29,9 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
-    }
-  })
-
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    },
+    icon: path.join(__dirname, '../../src/Assets/RogoGymLogo.png'), 
+    title:"RoboGym"
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -35,6 +46,14 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  console.log("Yarab")
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(() => {
+      splashWindow.destroy();
+      mainWindow.show();
+    }, 4000); 
+  });
 }
 
 // This method will be called when Electron has finished
@@ -56,10 +75,7 @@ app.whenReady().then(() => {
   
   createWindow()
 
-  ipcMain.on("initiate-websocket-connection", (_, url: string)=>{
-    console.log("We should have initated the websocket connection: ", url)
-    const ws = new WebSocketConnector('ws://localhost:8765');
-  })
+  
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -102,9 +118,3 @@ app.on('window-all-closed', () => {
   }
 })
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
-
-function runAnyPythonFunctions(params) {
-
-}

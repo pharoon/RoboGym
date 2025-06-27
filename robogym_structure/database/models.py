@@ -13,12 +13,12 @@ load_dotenv()
 
 # PostgreSQL configuration
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "1234")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "KiNg504$")
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "robogym")
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{'KiNg504$'}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 # SQLAlchemy setup
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
@@ -144,6 +144,13 @@ def get_user_by_id(user_id: int):
     db = SessionLocal()
     try:
         return db.query(User).filter(User.id == user_id).first()
+    finally:
+        db.close()
+
+def get_user_by_email(email: String):
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.email == email).first()
     finally:
         db.close()
 
@@ -341,6 +348,23 @@ def fetch_logs(model_name: str, user_id: int):
     finally:
         db.close()
 
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+def create_db_if_not_exists():
+    conn = psycopg2.connect(dbname="postgres", user=POSTGRES_USER, password=POSTGRES_PASSWORD, host=POSTGRES_HOST)
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = conn.cursor()
+
+    cur.execute("SELECT 1 FROM pg_database WHERE datname='robogym'")
+    exists = cur.fetchone()
+    if not exists:
+        print(" RoboGym database has been created successfully")
+        cur.execute("CREATE DATABASE robogym")
+
+    cur.close()
+    conn.close()
+
 if __name__ == "__main__":
     init_db()
-    print("✅ Tables created successfully.")
+    print("✅ Tables created successfully.", flush=True)

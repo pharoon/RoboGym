@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { SetStateAction, useEffect, useState } from 'react'
 import './HomePage.css'
-import RoboGymLogo from './RoboticARm.png'
+import RoboGymLogo from '../../../../../../RoboGym/src/Assets/RogoGymLogo.png'
 import { useNavigate } from 'react-router-dom'
 import DeleteModel from '../Modals/DeleteModel'
 import UploadModel from '../Modals/DeleteModel'
 import NameInputModal from '../Modals/NameInputModal'
 import { toast, ToastContainer } from 'react-toastify'
-const HomePage = () => {
+import { HomePageProps } from '@renderer/utils/interfaces'
+
+
+
+const HomePage:React.FC<HomePageProps> = (props) => {
+  const { userProfile, setUserProfile  } = props
+
   const navigate = useNavigate()
   const [showDeleteModel, setShowDeleteModel] = useState<boolean>(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingFilePath, setPendingFilePath] = useState<string | null>(null)
+
+
+  // useEffect(()=>{
+  //   toast.success(`Logging successfully ${userProfile.username}`)
+  // }, [userProfile])
 
   const handleFileUpload = async () => {
     // @ts-ignore
@@ -29,7 +40,8 @@ const HomePage = () => {
         },
         body: JSON.stringify({
           FilePath: pendingFilePath,
-          ModelName: modelName
+          ModelName: modelName,
+          currUserID:userProfile.user_id
         })
       })
         .then((res) => res.json())
@@ -40,6 +52,11 @@ const HomePage = () => {
     setPendingFilePath(null)
   }
 
+  const logOut = () => {
+    setUserProfile({})
+    navigate("/")
+  }
+
   return (
     <div className="HomePage">
       <ToastContainer position='bottom-left'/>
@@ -48,7 +65,7 @@ const HomePage = () => {
         <h2>RoboGym</h2>
       </div>
       <p className="WelcomeText">
-        Welcome,
+        Welcome, {userProfile.username}
         <br />
         This Platfrom enables you to train, validate, and test your reinforcment learning modules
         using a realistic simulation of a robotic arm
@@ -78,7 +95,6 @@ const HomePage = () => {
         </button>
         <button onClick={handleFileUpload}>Upload Exisiting Model</button>
         <button onClick={()=>{navigate("/Analytics")}}>Analytics Results</button>
-
         <button
           onClick={() => {
             navigate('/AllModels')
@@ -86,8 +102,11 @@ const HomePage = () => {
         >
           List All Models
         </button>
+
+        <button onClick={logOut}>Log Out</button>
+
       </div>
-      <DeleteModel showDeleteModal={showDeleteModel} setShowdeleteModal={setShowDeleteModel} />
+      <DeleteModel userProfile={userProfile} showDeleteModal={showDeleteModel} setShowdeleteModal={setShowDeleteModel} />
       <NameInputModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
