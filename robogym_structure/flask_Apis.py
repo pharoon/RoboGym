@@ -211,7 +211,7 @@ def api_list_models():
     data = request.json
 
     currUserID = data["currUserID"]
-    print("CurrUserID inside models is now ", currUserID, flush= True)
+    # print("CurrUserID inside models is now ", currUserID, flush= True)
     user_models = db.get_user_models(currUserID)
     
     if not user_models:

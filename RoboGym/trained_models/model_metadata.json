@@ -10,5 +10,11 @@
         "algorithm": "PPO",
         "created_at": "2025-06-27T23:14:41.662667",
         "path": "trained_models/user_2/second.zip"
+    },
+    "kk": {
+        "filename": "kk.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-28T17:31:27.690091",
+        "path": "trained_models/user_1/kk.zip"
     }
 }
