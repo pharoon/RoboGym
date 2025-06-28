@@ -16,7 +16,7 @@ from FileStorage import upload_to_storage, delete_from_storage
 load_dotenv('Credentials.env')
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5173"])  # Explicitly allow frontend origin
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
@@ -476,7 +476,6 @@ def api_rename_model():
 
 @app.post("/getModelSessions")
 # @token_required
-@cross_origin(origins="http://localhost:5173")
 def api_get_model_sessions():
     print("We are here", flush=True)
     data = request.get_json(silent=True)
