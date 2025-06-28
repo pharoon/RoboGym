@@ -1,6 +1,6 @@
 # flask_api.py
 from flask import Flask, json, request, jsonify, Response, stream_with_context
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model, GetModelRewards, compareModels
 from model_manager import manager as mm
 from database import models as db  
@@ -16,7 +16,7 @@ from FileStorage import upload_to_storage, delete_from_storage
 load_dotenv('Credentials.env')
 
 app = Flask(__name__)
-CORS(app)  # Allows calls from Electron frontend
+CORS(app, origins=["http://localhost:5173"])  # Explicitly allow frontend origin
 
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
@@ -156,6 +156,7 @@ def api_train():
         yield "data: 🟢 Training started...\n\n"
         start_time = time.time()
         mean_reward = None
+        logs = []
 
         try:
             for event in train_model_func(
@@ -172,7 +173,11 @@ def api_train():
                         _, logged_model_name, reward_str, timestep_str = line.split("::")
                         mean_reward = float(reward_str)
                         current_timestep = int(timestep_str)
-
+                        logs.append({
+                            "timestep": current_timestep,
+                            "mean_reward": mean_reward
+                        })
+                        print("Logs are ", logs, flush=True)
                         # db.log_training(
                         #     model_name=logged_model_name,
                         #     mean_reward=mean_reward,
@@ -183,12 +188,11 @@ def api_train():
                         pass  # Ignore malformed reward logs
 
                 yield event  # Pass the full SSE line back to the frontend
-
             # Save the final training session
             total_time = time.time() - start_time
             remote_model_path = f"user_{currUserID}/{model_name}.zip"
             model_url = upload_to_storage("models", local_model_path, remote_model_path)
-            db.updateModelPath(trained_model.id, model_url)
+            # db.updateModelPath(trained_model.id, model_url)
         
             db.create_train_session(
                 model_id=trained_model.id,
@@ -197,6 +201,9 @@ def api_train():
                 total_time=total_time,
                 mean_reward=mean_reward
             )
+
+            # Use The Logs to update the database
+            print("Final logs:", logs, flush=True)
 
         except Exception as e:
             yield f"data: ❌ Error: {str(e)}\n\n"
@@ -209,7 +216,8 @@ def api_train():
 def api_list_models():
     # Get models for the current user from the database
     data = request.json
-
+    if not data or not isinstance(data, dict):
+            return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
     currUserID = data["currUserID"]
     # print("CurrUserID inside models is now ", currUserID, flush= True)
     user_models = db.get_user_models(currUserID)
@@ -247,6 +255,8 @@ def api_list_models():
 # @token_required
 def api_upload_model():
     data = request.json
+    if not data or not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
     filePath = data.get("FilePath")
     modelName = data.get("ModelName")
     currUserID = data.get("currUserID")
@@ -296,10 +306,10 @@ def api_upload_model():
 def api_get_rewards():
     try:
         data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
         model_name = data["Model_Name"]
         currUserID = data["currUserID"]
-        if not data or 'Model_Name' not in data:
-            return jsonify({"status": "error", "message": "Model name is required"}), 400
         
         # Get the model's training history from our database
         logs = db.fetch_logs(model_name, currUserID)
@@ -379,14 +389,11 @@ def api_compare_Models(current_user):
 def api_delete_model():
     try:
         data = request.get_json(silent=True)
-        currUserID = data["currUserID"]
-        model_name = data["model_name"]
-        
         if not data or not isinstance(data, dict):
             return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+        currUserID = data["currUserID"]
+        model_name = data["model_name"]
             
-        if not model_name or not isinstance(model_name, str):
-            return jsonify({"status": "error", "message": "Valid model name is required"}), 400
         try:
             # Check if the model exists in the database for the current user
             trained_model = db.get_trained_model_by_name_and_user(currUserID, model_name)
@@ -443,6 +450,63 @@ def api_test():
         yield "event: end\ndata: done\n\n"
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
+
+@app.post("/rename")
+# @token_required
+def api_rename_model():
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+    model_name = data["model_name"]
+    new_name = data["new_name"]
+    currUserID = data["currUserID"]
+
+    if not data or not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+    
+    if not model_name or not isinstance(model_name, str):
+        return jsonify({"status": "error", "message": "Valid model name is required"}), 400             
+    if not new_name or not isinstance(new_name, str):
+        return jsonify({"status": "error", "message": "Valid new name is required"}), 400
+    
+    if db.model_rename(currUserID, model_name, new_name):
+        return jsonify({"status": "ok", "message": "Model renamed successfully"}), 200
+    else:
+        return jsonify({"status": "error", "message": "Failed to rename model"}), 500   
+
+@app.post("/getModelSessions")
+# @token_required
+@cross_origin(origins="http://localhost:5173")
+def api_get_model_sessions():
+    print("We are here", flush=True)
+    data = request.get_json(silent=True)
+    if not data or not isinstance(data, dict):
+        return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+
+    model_id = data.get("modelID")
+    currUserID = data.get("currUserID")
+    
+    if not model_id or not isinstance(model_id, int):
+        return jsonify({"status": "error", "message": "Valid model name is required"}), 400
+    
+    if not currUserID or not isinstance(currUserID, int):
+        return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
+    sessions = db.get_model_sessions(model_id, currUserID)
+    def session_to_dict(session):
+        return {
+            "id": session.id,
+            "model_id": session.model_id,
+            "user_id": session.user_id,
+            "timesteps": session.timesteps,
+            "total_time": session.total_time,
+            "mean_reward": session.mean_reward,
+            "started_at": session.started_at,
+            "completed_at": session.completed_at,
+            # Add any other fields you need
+        }
+
+    sessions_list = [session_to_dict(s) for s in sessions]
+    return jsonify({"status": "ok", "message": "Model sessions fetched successfully", "sessions": sessions_list}), 200
 
 if __name__ == "__main__":
     app.run(port=5000)

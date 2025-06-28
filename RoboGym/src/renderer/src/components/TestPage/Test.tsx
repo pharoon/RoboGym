@@ -2,6 +2,7 @@ import { GetModels } from '@renderer/utils/FetchData';
 import { Model, TestPageProps } from '@renderer/utils/interfaces';
 import React, { useEffect, useState } from 'react';
 import "./Test.css"
+import LoadingScreen from '@renderer/utils/LoadingScreen';
 
 const TestComponent: React.FC<TestPageProps> = ({ userProfile }) => {
   const [models, setModels] = useState<{ name: string }[]>([]);
@@ -122,12 +123,7 @@ const TestComponent: React.FC<TestPageProps> = ({ userProfile }) => {
         </div>
       </div>
 
-      {isTesting && (
-        <div className="loading-overlay">
-          <div className="spinner"></div>
-          <p>Running test...</p>
-        </div>
-      )}
+      <LoadingScreen loading={isTesting} text="Running test..." />
     </div>
   );
 };

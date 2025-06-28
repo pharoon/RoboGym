@@ -218,26 +218,26 @@ def delete_trained_model(user_id: int, model_name: str) -> bool:
     finally:
         db.close()
 
-def updateModelPath(model_id: int, new_model_path: str):
-    """Update the model path for a specific trained model."""
-    db = SessionLocal()
-    try:
-        model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
-        if not model:
-            print(f"Model with ID {model_id} not found.")
-            return False
+# def updateModelPath(model_id: int, new_model_path: str):
+#     """Update the model path for a specific trained model."""
+#     db = SessionLocal()
+#     try:
+#         model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+#         if not model:
+#             print(f"Model with ID {model_id} not found.")
+#             return False
 
-        model.model_path = new_model_path
-        db.commit()
-        return True
+#         model.model_path = new_model_path
+#         db.commit()
+#         return True
 
-    except Exception as e:
-        print(f"Error updating model path for ID {model_id}: {str(e)}")
-        db.rollback()
-        return False
+#     except Exception as e:
+#         print(f"Error updating model path for ID {model_id}: {str(e)}")
+#         db.rollback()
+#         return False
 
-    finally:
-        db.close()
+#     finally:
+#         db.close()
 
 def model_rename(user_id: int, old_name: str, new_name: str) -> bool:
     """
@@ -329,10 +329,10 @@ def create_train_session(model_id, user_id, timesteps, total_time, mean_reward=N
     finally:
         db.close()
 
-def get_model_sessions(model_id: int):
+def get_model_sessions(model_id: int, currUserID: int):
     db = SessionLocal()
     try:
-        return db.query(TrainSession).filter(TrainSession.model_id == model_id).all()
+        return db.query(TrainSession).filter(TrainSession.model_id == model_id).filter(TrainSession.user_id == currUserID).all()
     finally:
         db.close()
 

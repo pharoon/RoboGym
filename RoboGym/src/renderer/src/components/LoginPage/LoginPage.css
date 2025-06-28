@@ -3,13 +3,13 @@
 .app-bg {
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--bg-dark) 0%, var(--primary-color) 100%);
   position: relative;
   overflow: hidden;
   padding: 2rem;
+  width: 100vw
 }
 
 .app-bg::before {
@@ -180,6 +180,12 @@
   100% {
     opacity: 1;
     transform: translateY(0) rotateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .app-bg {
+    flex-direction: column;
   }
 }
 

@@ -3,6 +3,7 @@ import { FaUser, FaLock, FaEnvelope, FaRobot, FaIcons } from 'react-icons/fa'
 import './LoginPage.css'
 import { useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
+import LoadingScreen from '@renderer/utils/LoadingScreen'
 
 interface LoginProps{
   setUserProfile:React.Dispatch<SetStateAction<{}>>
@@ -14,6 +15,8 @@ const Login:React.FC<LoginProps> = ( props) => {
   const { setUserProfile } = props
 
   const [view, setView] = useState('login')
+  const [loading, setLoading] = useState(false)
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -23,7 +26,7 @@ const Login:React.FC<LoginProps> = ( props) => {
 
   const [errors, setErrors] = useState({})
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
     if (e.target.name === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -35,6 +38,7 @@ const Login:React.FC<LoginProps> = ( props) => {
   }
 
   const register = async () => {
+    setLoading(true)
     fetch('http://localhost:5000/register', {
       method: 'POST',
       headers: {
@@ -47,18 +51,21 @@ const Login:React.FC<LoginProps> = ( props) => {
         console.log("status is now ", status)
         if(status === 201){
           toast.success("Account has been created Successfully")
+          setLoading(false)
           setView("login")
         }
         else{
           const result : any = await response.json()
           console.log("Result is now ", result)
           toast.error(`Error: ${result.message}`)
+          setLoading(false)
         }
       })
       .catch((error) => console.log('Error occured while trying to sign user ', error))
   }
 
   const logUser = async () => {
+    setLoading(true)
     fetch('http://localhost:5000/login', {
       method: 'POST',
       headers: {
@@ -77,6 +84,7 @@ const Login:React.FC<LoginProps> = ( props) => {
           setUserProfile(result)
           navigate("/HomePage")
         }
+        setLoading(false)
       })
       .catch((error) => {
         console.log('Error occured while trying to log user ', error)
@@ -172,6 +180,7 @@ const Login:React.FC<LoginProps> = ( props) => {
           {view === 'login' ? renderLogin() : renderSignup()}
         </div>
       </div>
+      <LoadingScreen loading={loading} text={view === 'login' ? "Logging in..." : "Signing up..."} />
     </div>
   )
 }

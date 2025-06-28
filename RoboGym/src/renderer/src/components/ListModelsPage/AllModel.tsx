@@ -3,20 +3,38 @@ import { toast, ToastContainer } from 'react-toastify'
 import { AllDataProps, Model } from '@renderer/utils/interfaces'
 import { GetModels } from '@renderer/utils/FetchData'
 import './AllModel.css'
+import LoadingScreen from '@renderer/utils/LoadingScreen'
+import Modal from '../Modals/Modal'
+import ModelCard from './ModelCard'
+import EmptyState from './EmptyState'
+import { useNavigate } from 'react-router-dom'
 
 const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
   const [models, setModels] = useState<Model[]>([])
-  
+  const [loading, setLoading] = useState(true)
+  const [loadingText, setLoadingText] = useState('Loading models ...')
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const [sessions, setSessions] = useState<any[]>([])
+  const [sessionsModalOpen, setSessionsModalOpen] = useState(false)
+  const [selectedSessionIdx, setSelectedSessionIdx] = useState(0)
+  const navigate = useNavigate()
+
   const fetchModels = async () => {
     const models: Model[] = await GetModels(userProfile.user_id ?? '-1')
     setModels(models)
   }
 
   useEffect(() => {
-    fetchModels()
+    fetchModels().finally(() => setLoading(false))
   }, [])
 
+  console.log('Sessions are ', sessions)
+
   const handleDelete = (modelName: string) => {
+    setLoading(true)
+    setLoadingText('Deleting model ...')
     fetch('http://localhost:5000/delete', {
       method: 'POST',
       headers: {
@@ -36,6 +54,85 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
         console.error('Error deleting model:', err)
         toast.error('Failed to delete model')
       })
+      .finally(() => setLoading(false))
+  }
+
+  const handleDownload = (modelName: string) => {
+    // Placeholder for download logic
+    toast.info(`Download for ${modelName} not implemented yet.`)
+  }
+
+  const handleRenameClick = (modelName: string) => {
+    setRenameTarget(modelName)
+    setNewName('')
+    setRenameDialogOpen(true)
+  }
+
+  const handleRename = () => {
+    if (!renameTarget || !newName.trim()) return
+    setLoading(true)
+    setLoadingText('Renaming model ...')
+    fetch('http://localhost:5000/rename', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model_name: renameTarget,
+        new_name: newName,
+        currUserID: userProfile.user_id
+      })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to rename model')
+        return res.json()
+      })
+      .then(() => {
+        fetchModels()
+        toast.success('Model has been renamed')
+        setRenameDialogOpen(false)
+      })
+      .catch((err) => {
+        console.error('Error renaming model:', err)
+        toast.error('Failed to rename model')
+      })
+      .finally(() => setLoading(false))
+  }
+
+  const handleDialogClose = () => {
+    setRenameDialogOpen(false)
+    setRenameTarget(null)
+    setNewName('')
+  }
+
+  // Add a placeholder for continue training
+  const handleContinueTraining = (modelName: string) => {
+    navigate(`/Train?modelName=${modelName}`)
+  }
+
+  // Add a placeholder for view sessions
+  const handleViewSessions = (modelID: number) => {
+    setLoading(true)
+    fetch('http://localhost:5000/getModelSessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ modelID: modelID, currUserID: userProfile.user_id })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to get model sessions')
+        return res.json()
+      })
+      .then((data) => {
+        setSessions(data.sessions || [])
+        setSessionsModalOpen(true)
+      })
+      .catch((err) => {
+        toast.error('Failed to fetch sessions')
+        console.error('Error getting model sessions:', err)
+      })
+      .finally(() => setLoading(false))
   }
 
   return (
@@ -48,54 +145,120 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
 
       <div className="models-grid">
         {models.length === 0 ? (
-          <div className="empty-state">
-            <span className="material-icons">science</span>
-            <h2>No Models Found</h2>
-            <p>You haven't trained or uploaded any models yet.</p>
-          </div>
+          <EmptyState
+            title="No Models Found"
+            message="You haven't trained or uploaded any models yet."
+          />
         ) : (
           models.map((model, index) => (
-            <div key={index} className="model-card glass">
-              <div className="model-header">
-                <span className="material-icons">smart_toy</span>
-                <h3>{model.name}</h3>
-              </div>
-              
-              <div className="model-content">
-                <div className="info-row">
-                  <span className="material-icons">calendar_today</span>
-                  <p>Created: {model.created_at}</p>
-                </div>
-                
-                <div className="info-row">
-                  <span className="material-icons">psychology</span>
-                  <p>Algorithm: {model.algorithm}</p>
-                </div>
-                
-                <div className="info-row">
-                  <span className="material-icons">precision_manufacturing</span>
-                  <p>Robotic Arm: {model.robotic_arm}</p>
-                </div>
-                
-                <div className="info-row">
-                  <span className="material-icons">folder</span>
-                  <p>Path: {model.model_path}</p>
-                </div>
-              </div>
-
-              <button 
-                className="delete-button"
-                onClick={() => handleDelete(model.name)}
-              >
-                <span className="material-icons">delete</span>
-                Delete Model
-              </button>
-            </div>
+            <ModelCard
+              key={index}
+              model={model}
+              onDownload={handleDownload}
+              onRename={handleRenameClick}
+              onDelete={handleDelete}
+              onContinueTraining={handleContinueTraining}
+              onViewSessions={handleViewSessions}
+            />
           ))
         )}
       </div>
 
+      <Modal isOpen={renameDialogOpen} onClose={handleDialogClose}>
+        <div className="dialog-header">
+          <span
+            className="material-icons"
+            style={{ color: '#f1c40f', fontSize: '2rem', marginRight: '8px' }}
+          >
+            warning
+          </span>
+          <h2>Rename Model</h2>
+        </div>
+        <div className="dialog-body">
+          <p>Enter a new name for the model "{renameTarget}".</p>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="New model name"
+            className="dialog-input"
+            autoFocus
+            onFocus={(e) => (e.target.style.outline = 'none')}
+          />
+          <p style={{ color: '#f39c12', marginTop: '8px' }}>This action cannot be undone.</p>
+        </div>
+        <div className="dialog-actions">
+          <button className="dialog-cancel" onClick={handleDialogClose}>
+            Cancel
+          </button>
+          <button className="dialog-confirm" onClick={handleRename} disabled={!newName.trim()}>
+            Rename
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={sessionsModalOpen} onClose={() => setSessionsModalOpen(false)}>
+        <div className="dialog-header">
+          <span
+            className="material-icons"
+            style={{ color: '#3b82f6', fontSize: '2rem', marginRight: '8px' }}
+          >
+            timeline
+          </span>
+          <h2>Training Sessions</h2>
+        </div>
+        <div className="dialog-body sessions-modal-body">
+          {sessions.length === 0 ? (
+            <p>No sessions found for this model.</p>
+          ) : (
+            <div className="sessions-modal-content">
+              <div className="sessions-sidebar">
+                {sessions.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`session-index ${selectedSessionIdx === idx ? 'selected' : ''}`}
+                    onClick={() => setSelectedSessionIdx(idx)}
+                  >
+                    Session {idx + 1}
+                  </div>
+                ))}
+              </div>
+              <div className="session-details">
+                {sessions[selectedSessionIdx] && (
+                  <>
+                    <div>
+                      <b>Started At:</b>{' '}
+                      {new Date(sessions[selectedSessionIdx].started_at).toLocaleString()}
+                    </div>
+                    <div>
+                      <b>Completed At:</b>{' '}
+                      {new Date(sessions[selectedSessionIdx].completed_at).toLocaleString()}
+                    </div>
+                    <div>
+                      <b>Timesteps:</b> {sessions[selectedSessionIdx].timesteps}
+                    </div>
+                    <div>
+                      <b>Total Time:</b>{' '}
+                      {Number(sessions[selectedSessionIdx].total_time).toFixed(2)} seconds
+                    </div>
+                    <div>
+                      <b>Mean Reward:</b> {sessions[selectedSessionIdx].mean_reward}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="dialog-actions">
+          <button className="dialog-cancel" onClick={() => setSessionsModalOpen(false)}>
+            Close
+          </button>
+        </div>
+      </Modal>
+
       <ToastContainer position="bottom-left" />
+      <LoadingScreen loading={loading} text={loadingText} />
     </div>
   )
 }

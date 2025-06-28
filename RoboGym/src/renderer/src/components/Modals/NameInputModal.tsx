@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-} from '@mui/material';
+import Modal from './Modal';
 
 interface NameInputModalProps {
   open: boolean;
@@ -25,22 +18,26 @@ const NameInputModal: React.FC<NameInputModalProps> = ({ open, onClose, onSubmit
   };
 
   return (
-    <Dialog open={open} onClose={onClose} sx={{padding:10}}>
-      <DialogTitle>Enter Model Name</DialogTitle>
-        <TextField
-          autoFocus
-          fullWidth
-          label="Model Name"
+    <Modal isOpen={open} onClose={onClose}>
+      <div className="dialog-header">
+        <span className="material-icons" style={{ color: '#3b82f6', fontSize: '2rem', marginRight: '8px' }}>edit</span>
+        <h2>Enter Model Name</h2>
+      </div>
+      <div className="dialog-body">
+        <input
+          type="text"
           value={modelName}
-          onChange={(e) => setModelName(e.target.value)}
+          onChange={e => setModelName(e.target.value)}
+          placeholder="Model Name"
+          className="dialog-input"
+          autoFocus
         />
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained">
-          Submit
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+      <div className="dialog-actions">
+        <button className="dialog-cancel" onClick={onClose}>Cancel</button>
+        <button className="dialog-confirm" onClick={handleSubmit} disabled={!modelName.trim()}>Submit</button>
+      </div>
+    </Modal>
   );
 };
 

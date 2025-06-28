@@ -1,0 +1,50 @@
+.modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(20, 20, 40, 0.55); /* slightly lighter for glass effect */
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px) saturate(120%);
+    transition: background 0.3s;
+  }
+  
+  .modal-content {
+    background: rgba(35, 41, 70, 0.85);
+    color: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    padding: 2.5rem 2.8rem;
+    min-width: 340px;
+    max-width: 95vw;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    animation: modalPopIn 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+    backdrop-filter: blur(8px) saturate(120%);
+  }
+
+  @keyframes modalPopIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.95) translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Optional: add a subtle border glow */
+  .modal-content:after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    pointer-events: none;
+    box-shadow: 0 0 24px 2px rgba(80, 150, 255, 0.08);
+  }

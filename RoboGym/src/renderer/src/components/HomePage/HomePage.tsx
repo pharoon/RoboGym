@@ -1,16 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './HomePage.css'
 import DeleteModel from '../Modals/DeleteModel'
 import NameInputModal from '../Modals/NameInputModal'
 import { toast, ToastContainer } from 'react-toastify'
 import { HomePageProps } from '@renderer/utils/interfaces'
+import { useNavigate } from 'react-router-dom'
+import LoadingScreen from '@renderer/utils/LoadingScreen'
+import { GetModels } from '@renderer/utils/FetchData'
 
 const HomePage: React.FC<HomePageProps> = (props) => {
   const { userProfile } = props
   const [showDeleteModel, setShowDeleteModel] = useState<boolean>(false)
+  const [activeModels, setActiveModels] = useState<number>(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingFilePath, setPendingFilePath] = useState<string | null>(null)
-
+  const [uploading, setUploading] = useState<boolean>(false)
+  const navigate = useNavigate()
   const handleFileUpload = async () => {
     // @ts-ignore
     const filePath = await window.electronAPI.openFileDialog()
@@ -21,6 +26,8 @@ const HomePage: React.FC<HomePageProps> = (props) => {
   }
 
   const handleModelNameSubmit = (modelName: string) => {
+    console.log("We are here")
+    setUploading(true)
     if (pendingFilePath) {
       fetch('http://localhost:5000/upload', {
         method: 'POST',
@@ -34,12 +41,21 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         })
       })
         .then((res) => res.json())
-        .then(() => toast.success("File is uploaded Successfully"))
+        .then(() => toast.success("Model has been uploaded successfully"))
         .catch((err) => console.error('Upload error:', err))
+        .finally(() => setUploading(false))
     }
     setModalOpen(false)
     setPendingFilePath(null)
   }
+  
+  useEffect(() => {
+    const getActiveModels = async () => {
+      const models = await GetModels(userProfile.user_id ?? '-1')
+      setActiveModels(models.length)
+    }
+    getActiveModels()
+  }, [userProfile.user_id])
 
   return (
     <div className="home-page">
@@ -52,7 +68,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         <div className="stat-card glass">
           <span className="material-icons">model_training</span>
           <h3>Active Models</h3>
-          <p className="stat-number">3</p>
+          <p className="stat-number">{activeModels}</p>
         </div>
         <div className="stat-card glass">
           <span className="material-icons">psychology</span>
@@ -83,20 +99,20 @@ const HomePage: React.FC<HomePageProps> = (props) => {
 
         <div className="action-card glass">
           <div className="action-icon">
-            <span className="material-icons">delete</span>
+            <span className="material-icons">play_arrow</span>
           </div>
           <div className="action-content">
-            <h3>Delete Model</h3>
-            <p>Remove models you no longer need</p>
-            <button onClick={() => setShowDeleteModel(true)} className="action-button danger">
-              <span className="material-icons">delete_outline</span>
-              Delete Model
+            <h3>Quick Train</h3>
+            <p>Start training a new model with default settings</p>
+            <button onClick={() => navigate('/Train')} className="action-button">
+              <span className="material-icons">play_arrow</span>
+              Start Training
             </button>
           </div>
         </div>
       </div>
 
-      <ToastContainer position='bottom-left' />
+      <ToastContainer style={{zIndex: 1000}} position='bottom-left' />
       <DeleteModel 
         userProfile={userProfile} 
         showDeleteModal={showDeleteModel} 
@@ -107,6 +123,7 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         onClose={() => setModalOpen(false)}
         onSubmit={handleModelNameSubmit}
       />
+      <LoadingScreen loading={uploading} text="Uploading model..." />
     </div>
   )
 }

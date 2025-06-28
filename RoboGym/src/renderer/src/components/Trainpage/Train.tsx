@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react'
 import './Train.css'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TrainProps } from '@renderer/utils/interfaces'
 
 
 const Train:React.FC<TrainProps> = (props) => {
   const { userProfile } = props
 
-  const [modelName, setModelName] = useState<string>()
+  const searchParams = useSearchParams()
+  const [modelName, setModelName] = useState<string | undefined>(searchParams[0].get('modelName') ?? undefined  )
   const [TimeSteps, setTimeSteps] = useState<string>()
   const [Task, setTask] = useState<number>()
   const [trainingLogs, setTrainigLogs] = useState<string>()
-
   const [isTraining, setIsTraining] = useState<boolean>(false)
-  console.log("UserPRofile is ", userProfile)
+
   const navigate = useNavigate()
   const startTraining = () => {
     if (!modelName || !TimeSteps || !Task) return
@@ -27,7 +27,6 @@ const Train:React.FC<TrainProps> = (props) => {
     }
 
     eventSource.addEventListener('end', () => {
-      console.warn("What is happeneing ? ")
       eventSource.close()
       setIsTraining(false)
     })

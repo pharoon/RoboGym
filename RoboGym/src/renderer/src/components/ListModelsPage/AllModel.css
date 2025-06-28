@@ -58,6 +58,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
 }
 
 .model-header .material-icons {
@@ -74,6 +75,29 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
+}
+
+.model-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.model-actions .action-icon {
+  font-size: 1.15rem;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s;
+}
+.model-actions .action-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+.model-actions .delete-icon {
+  color: #e74c3c;
 }
 
 .model-content {
@@ -175,3 +199,205 @@
     transform: translateY(0);
   }
 } 
+
+
+.dialog-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(20, 20, 40, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal dialog box centered */
+.dialog-modal {
+  background: #232946;
+  color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  padding: 2rem 2.5rem;
+  min-width: 320px;
+  max-width: 90vw;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.dialog-body {
+  margin-bottom: 1.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.dialog-cancel,
+.dialog-confirm {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.dialog-cancel {
+  background: #444b6e;
+  color: #fff;
+}
+
+.dialog-confirm {
+  background: #e74c3c;
+  color: #fff;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.7rem;
+  border-radius: 5px;
+  border: 1px solid #444b6e;
+  background: #16161a;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.model-card-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.continue-training-button, .delete-model-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.85rem 0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.continue-training-button {
+  background: rgba(16, 185, 129, 0.15);
+  color: #22c55e;
+  border: 1.5px solid rgba(34, 197, 94, 0.18);
+}
+.continue-training-button:hover {
+  background: rgba(16, 185, 129, 0.25);
+  transform: translateY(-2px);
+}
+.continue-training-button .material-icons {
+  font-size: 1.3rem;
+}
+
+.delete-model-button {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1.5px solid rgba(239, 68, 68, 0.18);
+}
+.delete-model-button:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: translateY(-2px);
+}
+.delete-model-button .material-icons {
+  font-size: 1.3rem;
+}
+
+.view-sessions-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.85rem 0;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.15); /* blue-500 */
+  color: #3b82f6;
+  border: 1.5px solid rgba(59, 130, 246, 0.18);
+  transition: background 0.2s, transform 0.2s;
+}
+.view-sessions-button:hover {
+  background: rgba(59, 130, 246, 0.25);
+  transform: translateY(-2px);
+}
+.view-sessions-button .material-icons {
+  font-size: 1.3rem;
+}
+
+.sessions-modal-body {
+  min-width: 420px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sessions-modal-content {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  min-height: 180px;
+}
+
+.sessions-sidebar {
+  min-width: 120px;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.session-index {
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #60a5fa;
+  font-weight: 500;
+  background: none;
+  border: none;
+  text-align: left;
+  transition: background 0.2s, color 0.2s;
+}
+
+.session-index.selected,
+.session-index:hover {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.session-details {
+  flex: 1;
+  background: rgba(59, 130, 246, 0.04);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  font-size: 1.08rem;
+}

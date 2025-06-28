@@ -27,7 +27,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ userProfile, setUserProfile }) 
   return (
     <div className="layout-container">
       {/* Sidebar */}
-      <div className="sidebar glass">
+      <div className="sidebar glass" style={{zIndex: "unset"}}>
         <div className="logo-section">
           <img src={RoboGymLogo} alt="RoboGym Logo" />
           <h2>RoboGym</h2>
@@ -37,8 +37,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ userProfile, setUserProfile }) 
           <MenuItem 
             icon="home" 
             text="Dashboard" 
-            onClick={() => navigate('/')} 
-            active={location.pathname === '/'}
+            onClick={() => navigate('/HomePage')} 
+            active={location.pathname === '/HomePage'}
           />
           <MenuItem 
             icon="science" 
