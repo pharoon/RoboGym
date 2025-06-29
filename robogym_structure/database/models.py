@@ -460,7 +460,6 @@ def log_training(model_name: str, mean_reward: float, current_timestep: int, use
         current_session = (
             db.query(TrainSession)
             .filter(TrainSession.model_id == model.id)
-            .filter(TrainSession.user_id == user_id)  # Extra safety check
             .filter(TrainSession.completed_at.is_(None))  # Not completed yet
             .first()
         )
@@ -469,10 +468,9 @@ def log_training(model_name: str, mean_reward: float, current_timestep: int, use
             # Create a new session if none exists
             current_session = TrainSession(
                 model_id=model.id,
-                user_id=user_id,
                 timesteps=0,  # Will be updated when training completes
                 total_time=0.0,  # Will be updated when training completes
-                started_at= datetime.now(timezone.utc)
+                started_at=datetime.now(timezone.utc)
             )
             db.add(current_session)
             db.commit()  # Commit to get the session ID
@@ -503,7 +501,6 @@ def fetch_logs(model_name: str, user_id: int):
         sessions = (
             db.query(TrainSession)
             .filter(TrainSession.model_id == model.id)
-            .filter(TrainSession.user_id == user_id)  # Extra safety check
             .order_by(TrainSession.started_at)
             .all()
         )
@@ -511,13 +508,22 @@ def fetch_logs(model_name: str, user_id: int):
         # Format the logs
         logs = []
         for session in sessions:
-            # Get all progress logs for this session
-            progress_logs = (
-                db.query(TrainingProgress)
-                .filter(TrainingProgress.session_id == session.id)
-                .order_by(TrainingProgress.timestep)
-                .all()
-            )
+            # Parse the train_log JSON if it exists
+            progress = []
+            if session.train_log:
+                try:
+                    import json
+                    train_log_data = json.loads(session.train_log)
+                    if isinstance(train_log_data, list):
+                        progress = train_log_data
+                except (json.JSONDecodeError, TypeError):
+                    # If train_log is not valid JSON, create a basic progress entry
+                    if session.mean_reward is not None:
+                        progress = [{
+                            'timestep': session.timesteps,
+                            'mean_reward': session.mean_reward,
+                            'logged_at': session.completed_at.isoformat() if session.completed_at else None
+                        }]
             
             session_data = {
                 'session_id': session.id,
@@ -529,14 +535,7 @@ def fetch_logs(model_name: str, user_id: int):
                 'is_completed': session.completed_at is not None,
                 'total_time': float(session.total_time) if session.total_time else 0.0,
                 'final_timesteps': int(session.timesteps) if session.timesteps else 0,
-                'progress': [
-                    {
-                        'timestep': int(log.timestep),
-                        'mean_reward': float(log.mean_reward) if log.mean_reward is not None else None,
-                        'logged_at': log.logged_at.isoformat() if log.logged_at else None
-                    }
-                    for log in progress_logs
-                ]
+                'progress': progress
             }
             logs.append(session_data)
         

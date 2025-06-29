@@ -6,7 +6,7 @@ interface ModelCardProps {
   onDownload: (modelName: string) => void
   onRename: (modelName: string) => void
   onDelete: (modelName: string) => void
-  onContinueTraining: (modelName: string) => void
+  onContinueTraining: (modelName: string, modelID: number) => void
   onViewSessions: (modelID: number) => void
 }
 
@@ -73,7 +73,7 @@ const ModelCard: React.FC<ModelCardProps> = ({
       </div>
     </div>
     <div className="model-card-actions">
-      <button className="continue-training-button" onClick={() => onContinueTraining(model.name)}>
+      <button className="continue-training-button" onClick={() => onContinueTraining(model.name, model.id ?? 0)}>
         <span className="material-icons">play_arrow</span>
         Continue Training
       </button>

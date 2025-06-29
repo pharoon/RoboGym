@@ -106,8 +106,8 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
   }
 
   // Add a placeholder for continue training
-  const handleContinueTraining = (modelName: string) => {
-    navigate(`/Train?modelName=${modelName}`)
+  const handleContinueTraining = (modelName: string, modelID: number) => {
+    navigate(`/Train?modelName=${modelName}&continueTraining=true&modelID=${modelID}`)
   }
 
   // Add a placeholder for view sessions

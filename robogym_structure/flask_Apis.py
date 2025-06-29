@@ -17,7 +17,11 @@ load_dotenv('Credentials.env')
 
 app = Flask(__name__)
 # Configure CORS to allow all origins for development
-CORS(app, origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"], supports_credentials=True)
+CORS(app, 
+     origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "*"], 
+     supports_credentials=True,
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Origin"])
 
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
@@ -221,16 +225,14 @@ def api_train():
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
-@app.post("/continue_train")
+@app.get("/continue_train")
 # @token_required
 def api_continue_train():
-    data = request.get_json()
-
-    model_id = data.get("model_id")
-    model_name = data.get("model_name")
-    timesteps = data.get("timesteps")
-    task_number = data.get("task_number")
-    currUserID = data.get('curr_user_id')
+    model_id = request.args.get("model_id")
+    model_name = request.args.get("model_name")
+    timesteps = request.args.get("timesteps")
+    task_number = request.args.get("task_number")
+    currUserID = request.args.get('curr_user_id')
 
     if not model_name or not timesteps or not task_number or not currUserID:
         return jsonify({"status": "error", "message": "Missing required parameters"}), 400
@@ -238,6 +240,7 @@ def api_continue_train():
         timesteps = int(timesteps)
         task_number = int(task_number)
         currUserID = int(currUserID)
+        model_id = int(model_id) if model_id else None
     except ValueError:
         return "Invalid parameter types", 400
 
@@ -286,21 +289,22 @@ def api_continue_train():
 
             # Upload updated model to Supabase
             upload_to_storage("models", local_model_path, remote_model_path)
-            db.update_trained_model(
-                model_id=model_id,
-                timesteps=timesteps,
-                total_time=total_time,
-                mean_reward=mean_reward if mean_reward is not None else 0.0,
-                new_model_path=remote_model_path
-            )
-            db.create_train_session(
-                model_id=model_id,
-                user_id=currUserID,
-                timesteps=timesteps,
-                total_time=total_time,
-                mean_reward=mean_reward,
-                train_log=json.dumps(logs)
-            )
+            if model_id is not None:
+                db.update_trained_model(
+                    model_id=model_id,
+                    timesteps=timesteps,
+                    total_time=total_time,
+                    mean_reward=mean_reward if mean_reward is not None else 0.0,
+                    new_model_path=remote_model_path
+                )
+                db.create_train_session(
+                    model_id=model_id,
+                    user_id=currUserID,
+                    timesteps=timesteps,
+                    total_time=total_time,
+                    mean_reward=mean_reward,
+                    train_log=json.dumps(logs)
+                )
 
         except Exception as e:
             yield f"data: ❌ Error: {str(e)}\n\n"
@@ -620,7 +624,7 @@ def api_get_model_sessions():
     
     if not currUserID or not isinstance(currUserID, int):
         return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
-    sessions = db.get_model_sessions(model_id, currUserID)
+    sessions = db.get_model_sessions(model_id)
     def session_to_dict(session):
         return {
             "id": session.id,
@@ -640,30 +644,51 @@ def api_get_model_sessions():
 @app.post("/getUserStats")
 # @token_required
 def api_get_user_stats():
+    print(f"DEBUG: getUserStats called with method: {request.method}")
+    print(f"DEBUG: Request headers: {dict(request.headers)}")
+    print(f"DEBUG: Request origin: {request.headers.get('Origin', 'No origin')}")
+    
     try:
         data = request.get_json(silent=True)
+        print(f"DEBUG: Request data: {data}")
+        
         if not data or not isinstance(data, dict):
-            return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+            response = jsonify({"status": "error", "message": "Invalid or missing JSON data"})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 400
         
         currUserID = data.get("currUserID")
         if not currUserID:
-            return jsonify({"status": "error", "message": "currUserID is required"}), 400
+            response = jsonify({"status": "error", "message": "currUserID is required"})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 400
         
         try:
             currUserID = int(currUserID)
         except (ValueError, TypeError):
-            return jsonify({"status": "error", "message": "currUserID must be a valid integer"}), 400
+            response = jsonify({"status": "error", "message": "currUserID must be a valid integer"})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 400
         
         print("CurrUserID is ", currUserID, flush=True)
         
         stats = db.get_user_stats(currUserID)
         if not stats:
-            return jsonify({"status": "error", "message": "User stats not found"}), 404
+            response = jsonify({"status": "error", "message": "User stats not found"})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response, 404
 
-        return jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats}), 200
+        response = jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        print(f"DEBUG: Sending response: {response.get_json()}")
+        return response, 200
     except Exception as e:
         print(f"Error in getUserStats: {str(e)}", flush=True)
-        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
+        response = jsonify({"status": "error", "message": f"Internal server error: {str(e)}"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response, 500
 
 @app.post("/test1")
 # @token_required
@@ -685,4 +710,7 @@ def api_test1():
 
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    print(" Starting RoboGym Flask API server...")
+    print(" Server will be available at: http://localhost:5000")
+    print(" CORS is configured for development")
+    app.run(port=5000, debug=True, host='0.0.0.0')

@@ -9,6 +9,8 @@ const Train:React.FC<TrainProps> = (props) => {
 
   const searchParams = useSearchParams()
   const [modelName, setModelName] = useState<string | undefined>(searchParams[0].get('modelName') ?? undefined  )
+  const [continueTraining,_] = useState<boolean>(searchParams[0].get('continueTraining') === 'true')
+  const [modelID, __] = useState<number>(Number(searchParams[0].get('modelID') ?? 0))
   const [TimeSteps, setTimeSteps] = useState<string>()
   const [Task, setTask] = useState<number>()
   const [trainingLogs, setTrainigLogs] = useState<string>()
@@ -19,7 +21,7 @@ const Train:React.FC<TrainProps> = (props) => {
     if (!modelName || !TimeSteps || !Task) return
     setIsTraining(true)
     const eventSource = new EventSource(
-      `http://localhost:5000/train?model_name=${modelName}&timesteps=${TimeSteps}&task_number=${Task}&curr_user_id=${userProfile.user_id}`
+      `http://localhost:5000/${continueTraining ? 'continue_train' : 'train'}?model_name=${modelName}&timesteps=${TimeSteps}&task_number=${Task}&curr_user_id=${userProfile.user_id}&model_id=${modelID}`
     )
 
     eventSource.onmessage = (event) => {
