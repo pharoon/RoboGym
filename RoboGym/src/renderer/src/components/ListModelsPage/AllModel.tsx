@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toast, ToastContainer } from 'react-toastify'
 import { AllDataProps, Model } from '@renderer/utils/interfaces'
 import { GetModels } from '@renderer/utils/FetchData'
@@ -8,6 +8,31 @@ import Modal from '../Modals/Modal'
 import ModelCard from './ModelCard'
 import EmptyState from './EmptyState'
 import { useNavigate } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts'
+
+interface TrainingSession {
+  completed_at: string;
+  final_timesteps: number;
+  is_completed: boolean;
+  model_id: number;
+  model_name: string;
+  progress: Array<{
+    mean_reward: number;
+    timestep: number;
+  }>;
+  session_id: number;
+  started_at: string;
+  total_time: number;
+  user_id: number;
+}
+
+interface ChartData {
+  timestep: number;
+  mean_reward: number;
+  session_id: number;
+  session_start: string;
+  session_duration: string;
+}
 
 const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
   const [models, setModels] = useState<Model[]>([])
@@ -18,12 +43,16 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
   const [newName, setNewName] = useState('')
   const [sessions, setSessions] = useState<any[]>([])
   const [sessionsModalOpen, setSessionsModalOpen] = useState(false)
-  const [selectedSessionIdx, setSelectedSessionIdx] = useState(0)
+  const [selectedSessionIdx, setSelectedSessionIdx] = useState<number | null>(null)
+  const [sessionDetailsModalOpen, setSessionDetailsModalOpen] = useState(false)
+  const [sessionDetails, setSessionDetails] = useState<ChartData[]>([])
+  const [sessionDetailsLoading, setSessionDetailsLoading] = useState(false)
+  const [selectedSession, setSelectedSession] = useState<any>(null)
   const navigate = useNavigate()
 
   const fetchModels = async () => {
-    const models: Model[] = await GetModels(userProfile.user_id ?? '-1')
-    setModels(models)
+    const modelsData: Model[] = await GetModels(userProfile.user_id ?? '-1')
+    setModels(modelsData)
   }
 
   useEffect(() => {
@@ -176,6 +205,68 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
       .finally(() => setLoading(false))
   }
 
+  const handleViewSessionDetails = async (session: any) => {
+    setSelectedSession(session)
+    setSessionDetailsLoading(true)
+    setSessionDetailsModalOpen(true)
+    
+    try {
+      // Parse the train_log string from the session data
+      if (session.train_log) {
+        const trainLogData = JSON.parse(session.train_log);
+        
+        // Transform the parsed data to chart format
+        const transformedData = trainLogData.map((point: any, index: number) => ({
+          timestep: point.timestep || index * 10, // Use timestep from data or calculate from index
+          mean_reward: point.mean_reward,
+          session_id: session.session_id,
+          session_start: new Date(session.started_at).toLocaleDateString(),
+          session_duration: session.total_time ? Number(session.total_time).toFixed(2) : '0.00'
+        }));
+        
+        setSessionDetails(transformedData);
+      } else {
+        // Fallback: try to fetch from API if train_log is not available
+        const response = await fetch('http://localhost:5000/getRewards', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            "Model_Name": session.model_name,
+            "currUserID": userProfile.user_id
+          })
+        });
+
+        const data = await response.json()
+        if (data.status === 'ok' && Array.isArray(data.data)) {
+          // Find the specific session and transform its data
+          const sessionData = data.data.find((s: TrainingSession) => s.session_id === session.session_id);
+          if (sessionData) {
+            const transformedData = sessionData.progress.map((point) => ({
+              ...point,
+              session_id: sessionData.session_id,
+              session_start: new Date(sessionData.started_at).toLocaleDateString(),
+              session_duration: sessionData.total_time.toFixed(2)
+            }));
+            setSessionDetails(transformedData);
+          } else {
+            setSessionDetails([]);
+          }
+        } else {
+          setSessionDetails([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing session details:', error);
+      setSessionDetails([]);
+    } finally {
+      setSessionDetailsLoading(false);
+    }
+  }
+
+  const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
   return (
     <div className="models-container">
       <div className="models-header">
@@ -288,7 +379,14 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
                     </div>
                   </div>
 
-                  <button className="view-details-button" title="View Details">
+                  <button 
+                    className="view-details-button" 
+                    title="View Details"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewSessionDetails(session);
+                    }}
+                  >
                     <span className="material-icons">visibility</span>
                   </button>
                 </div>
@@ -298,6 +396,98 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
         </div>
         <div className="dialog-actions">
           <button className="dialog-cancel" onClick={() => setSessionsModalOpen(false)}>
+            Close
+          </button>
+        </div>
+      </Modal>
+
+      {/* Session Details Modal */}
+      <Modal isOpen={sessionDetailsModalOpen} onClose={() => setSessionDetailsModalOpen(false)} className="session-details-modal">
+        <div className="dialog-header">
+          <span
+            className="material-icons"
+            style={{ color: '#10b981', fontSize: '2rem', marginRight: '8px' }}
+          >
+            show_chart
+          </span>
+          <h2>Session Training Progress</h2>
+        </div>
+        <div className="dialog-body session-details-modal-body">
+          {sessionDetailsLoading ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <span className="material-icons" style={{ fontSize: '2rem', animation: 'spin 1s linear infinite' }}>
+                hourglass_empty
+              </span>
+              <p>Loading session data...</p>
+            </div>
+          ) : sessionDetails.length > 0 ? (
+            <div className="session-chart-container">
+              <div className="session-info-summary">
+                <div className="summary-item">
+                  <span className="material-icons">calendar_today</span>
+                  <span>Started: {selectedSession?.started_at ? new Date(selectedSession.started_at).toLocaleDateString() : 'N/A'}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="material-icons">timer</span>
+                  <span>Duration: {selectedSession?.total_time ? Number(selectedSession.total_time).toFixed(2) + 's' : 'N/A'}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="material-icons">trending_up</span>
+                  <span>Steps: {selectedSession?.timesteps || 'N/A'}</span>
+                </div>
+              </div>
+              
+              <div className="chart-wrapper" style={{ height: '300px', marginTop: '1rem' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={sessionDetails} margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="timestep" stroke="#9CA3AF" label={{ value: 'Timesteps', position: 'insideBottom', offset: -10 }} />
+                    <YAxis stroke="#9CA3AF" label={{ value: 'Mean Reward', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px', color: '#F9FAFB' }}
+                      labelFormatter={(value) => `Timestep: ${value}`}
+                      formatter={(value) => [value, 'Mean Reward']}
+                    />
+                    <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '10px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="mean_reward" 
+                      stroke={colors[0]} 
+                      strokeWidth={2}
+                      dot={{ fill: colors[0], strokeWidth: 2, r: 3 }}
+                      activeDot={{ r: 5, stroke: colors[0], strokeWidth: 2 }}
+                      name="Training Progress"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="chart-stats" style={{ display: 'flex', justifyContent: 'space-around', marginTop: '1rem', padding: '1rem', backgroundColor: '#1f2937', borderRadius: '8px' }}>
+                <div className="stat-item">
+                  <span className="stat-label">Data Points:</span>
+                  <span className="stat-value">{sessionDetails.length}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Max Reward:</span>
+                  <span className="stat-value">{Math.max(...sessionDetails.map(d => d.mean_reward)).toFixed(2)}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Min Reward:</span>
+                  <span className="stat-value">{Math.min(...sessionDetails.map(d => d.mean_reward)).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>
+              <span className="material-icons" style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                error_outline
+              </span>
+              <p>No training data found for this session.</p>
+            </div>
+          )}
+        </div>
+        <div className="dialog-actions">
+          <button className="dialog-cancel" onClick={() => setSessionDetailsModalOpen(false)}>
             Close
           </button>
         </div>

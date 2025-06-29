@@ -28,6 +28,15 @@
     backdrop-filter: blur(8px) saturate(120%);
   }
 
+  /* Session details modal - wider for better chart visualization */
+  .modal-content.session-details-modal {
+    width: 70vw;
+    max-width: 70vw;
+    min-width: 600px;
+    max-height: 85vh;
+    overflow: hidden;
+  }
+
   @keyframes modalPopIn {
     0% {
       opacity: 0;
