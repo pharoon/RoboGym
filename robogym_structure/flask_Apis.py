@@ -137,17 +137,7 @@ def api_train():
 
     local_model_path = f"{user_models_dir}/{model_name}.zip"
     # Create a trained model record in the database
-    try:
-        trained_model = db.create_trained_model(
-            name=model_name,
-            model_path="placeholder",
-            algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
-            robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
-            user_id=currUserID
-        )
-    except Exception as e:
-        return jsonify({'message': f'Error creating model record: {str(e)}'}), 500
-
+    
     
     current_timestep = 0
 
@@ -191,16 +181,35 @@ def api_train():
             # Save the final training session
             total_time = time.time() - start_time
             remote_model_path = f"user_{currUserID}/{model_name}.zip"
-            model_url = upload_to_storage("models", local_model_path, remote_model_path)
-            # db.updateModelPath(trained_model.id, model_url)
-        
-            db.create_train_session(
-                model_id=trained_model.id,
-                user_id=currUserID,
-                timesteps=timesteps,
-                total_time=total_time,
-                mean_reward=mean_reward
-            )
+            try:
+                model_url = upload_to_storage("models", local_model_path, remote_model_path)
+                trained_model = db.create_trained_model(
+                    name=model_name,
+                    model_path=model_url,
+                    algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
+                    robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
+                    user_id=currUserID,
+                    timesteps=timesteps,
+                    total_time=total_time,
+                    mean_reward=mean_reward,
+                )
+            except Exception as e:
+                return jsonify({'message': f'Error creating model record: {str(e)}'}), 500
+
+            try:
+                db.create_train_session(
+                    model_id=trained_model.id,
+                    user_id=currUserID,
+                    timesteps=timesteps,
+                    total_time=total_time,
+                    mean_reward=mean_reward,
+                    train_log=json.dumps(logs)
+                )
+            except Exception as e:
+                return jsonify({'message': f'Error creating training session: {str(e)}'}), 500
+            
+
+           
 
             # Use The Logs to update the database
             print("Final logs:", logs, flush=True)
@@ -242,7 +251,12 @@ def api_list_models():
                 'algorithm': str(model.algorithm.value) if hasattr(model.algorithm, 'value') else None,
                 'robotic_arm': str(model.robotic_arm.value) if hasattr(model.robotic_arm, 'value') else None,
                 'created_at': created_at,
-                'model_path': model.model_path
+                'model_path': model.model_path,
+                'updated_at': model.updated_at.isoformat() if model.updated_at else None,
+                'total_training_time': model.total_training_time,
+                'final_mean_reward': model.final_mean_reward,
+                'total_timesteps': model.total_timesteps,
+
             }
             models_list.append(model_data)
         except AttributeError:
@@ -289,6 +303,8 @@ def api_upload_model():
             robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for uploaded models
             user_id=currUserID
         )
+
+       
         
         return jsonify({
             "status": "ok",
@@ -448,7 +464,11 @@ def api_test():
         except Exception as e:
             yield f"data: ❌ test_model raised exception: {str(e)}\n\n"
         yield "event: end\ndata: done\n\n"
-
+  
+        db.increment_tests_run(currUserID)
+    
+        # Start the test in a separate process
+        Process(target=Test_Model, args=(model_name, task_name, int(episodes), user_models_dir)).start()
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
 @app.post("/rename")
@@ -490,22 +510,54 @@ def api_get_model_sessions():
     
     if not currUserID or not isinstance(currUserID, int):
         return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
-    sessions = db.get_model_sessions(model_id, currUserID)
+    sessions = db.get_model_sessions(model_id)
     def session_to_dict(session):
         return {
             "id": session.id,
             "model_id": session.model_id,
-            "user_id": session.user_id,
             "timesteps": session.timesteps,
             "total_time": session.total_time,
             "mean_reward": session.mean_reward,
             "started_at": session.started_at,
             "completed_at": session.completed_at,
+            'train_log': session.train_log,  # Assuming train_log is a JSON string
             # Add any other fields you need
         }
 
     sessions_list = [session_to_dict(s) for s in sessions]
     return jsonify({"status": "ok", "message": "Model sessions fetched successfully", "sessions": sessions_list}), 200
+
+@app.get("/getUserStats")
+# @token_required
+def api_get_user_stats():
+    currUserID = request.args.get("currUserID", type=int)
+    if not currUserID or not isinstance(currUserID, int):
+        return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
+
+    stats = db.get_user_stats(currUserID)
+    if not stats:
+        return jsonify({"status": "error", "message": "User stats not found"}), 404
+
+    return jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats}), 200
+
+@app.post("/test1")
+# @token_required
+def api_test1():
+
+    if db.create_trained_model(
+                    name="sa",
+                    model_path="asd",
+                    algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
+                    robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
+                    user_id=2,
+                    timesteps=20,
+                    total_time=20.2,
+                    mean_reward=-5,
+                ):
+        return jsonify({"status": "ok", "message": "Model exists"}), 200
+    else:
+        return jsonify({"status": "error", "message": "Failed to rename model"}), 500   
+
 
 if __name__ == "__main__":
     app.run(port=5000)

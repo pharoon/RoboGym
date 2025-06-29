@@ -14,7 +14,85 @@
     "kk": {
         "filename": "kk.zip",
         "algorithm": "PPO",
-        "created_at": "2025-06-28T17:31:27.690091",
-        "path": "trained_models/user_1/kk.zip"
+        "created_at": "2025-06-29T13:40:44.127609",
+        "path": "trained_models/user_2/kk.zip"
+    },
+    "sad": {
+        "filename": "sad.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T11:57:18.304661",
+        "path": "trained_models/user_10/sad.zip"
+    },
+    "yar": {
+        "filename": "yar.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:19:00.720210",
+        "path": "trained_models/user_10/yar.zip"
+    },
+    "final": {
+        "filename": "final.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:21:48.397031",
+        "path": "trained_models/user_10/final.zip"
+    },
+    "om": {
+        "filename": "om.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:27:59.829489",
+        "path": "trained_models/user_11/om.zip"
+    },
+    "test": {
+        "filename": "test.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:50:37.407543",
+        "path": "trained_models/user_12/test.zip"
+    },
+    "test2": {
+        "filename": "test2.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:54:33.245111",
+        "path": "trained_models/user_12/test2.zip"
+    },
+    "tet3": {
+        "filename": "tet3.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T12:56:07.341704",
+        "path": "trained_models/user_12/tet3.zip"
+    },
+    "et": {
+        "filename": "et.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T13:22:33.878824",
+        "path": "trained_models/user_1/et.zip"
+    },
+    "asd": {
+        "filename": "asd.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T13:23:42.852979",
+        "path": "trained_models/user_1/asd.zip"
+    },
+    "kk2": {
+        "filename": "kk2.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T13:43:39.642131",
+        "path": "trained_models/user_2/kk2.zip"
+    },
+    "ahmaaa": {
+        "filename": "ahmaaa.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T13:57:16.919948",
+        "path": "trained_models/user_3/ahmaaa.zip"
+    },
+    "dddd": {
+        "filename": "dddd.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T14:00:10.834020",
+        "path": "trained_models/user_3/dddd.zip"
+    },
+    "asddddd": {
+        "filename": "asddddd.zip",
+        "algorithm": "PPO",
+        "created_at": "2025-06-29T14:08:52.586617",
+        "path": "trained_models/user_3/asddddd.zip"
     }
 }

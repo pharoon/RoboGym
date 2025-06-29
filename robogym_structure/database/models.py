@@ -1,9 +1,9 @@
 # models.py
-from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, create_engine, JSON,func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 import os
 from dotenv import load_dotenv
@@ -45,18 +45,27 @@ class User(Base):
     username = Column(String, unique=True, index=True, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     trained_models = relationship("TrainedModel", back_populates="user", cascade="all, delete-orphan")
-    train_sessions = relationship("TrainSession", back_populates="user", cascade="all, delete-orphan")
+    stats = relationship("UserStats", uselist=False, back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password: str) -> bool:
-        # Convert SQLAlchemy Column to string
-        stored_hash = str(self.password_hash) if self.password_hash is not None else ""
-        return check_password_hash(stored_hash, password)
+        return check_password_hash(str(self.password_hash), password)
+
+class UserStats(Base):
+    __tablename__ = "user_stats"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    tests_run = Column(Integer, default=0)
+    train_sessions_count = Column(Integer, default=0)
+    trained_models_count = Column(Integer, default=0)
+
+    user = relationship("User", back_populates="stats")
 
 class TrainedModel(Base):
     __tablename__ = "trained_models"
@@ -66,38 +75,41 @@ class TrainedModel(Base):
     model_path = Column(String, nullable=False)
     algorithm = Column(Enum(AlgorithmType), nullable=False)
     robotic_arm = Column(Enum(RoboticArmType), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    total_timesteps = Column(Integer, default=0)
+    total_training_time = Column(Float, default=0.0)
+    final_mean_reward = Column(Float)
 
     user = relationship("User", back_populates="trained_models")
     train_sessions = relationship("TrainSession", back_populates="model", cascade="all, delete-orphan")
 
-class TrainingProgress(Base):
-    __tablename__ = "training_progress"
+# class TrainingProgress(Base):
+#     __tablename__ = "training_progress"
 
-    id = Column(Integer, primary_key=True, index=True)
-    session_id = Column(Integer, ForeignKey("train_sessions.id"), nullable=False)
-    timestep = Column(Integer, nullable=False)
-    mean_reward = Column(Float)
-    logged_at = Column(DateTime, default=datetime.utcnow)
+#     id = Column(Integer, primary_key=True, index=True)
+#     session_id = Column(Integer, ForeignKey("train_sessions.id"), nullable=False)
+#     timestep = Column(Integer, nullable=False)
+#     mean_reward = Column(Float)
+#     logged_at = Column(DateTime, default=datetime.utcnow)
 
-    session = relationship("TrainSession", back_populates="progress_logs")
+#     session = relationship("TrainSession", back_populates="progress_logs")
 
 class TrainSession(Base):
     __tablename__ = "train_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
     model_id = Column(Integer, ForeignKey("trained_models.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     timesteps = Column(Integer, nullable=False)
     total_time = Column(Float, nullable=False)
-    mean_reward = Column(Float)  # Final mean reward
-    started_at = Column(DateTime, default=datetime.utcnow)
-    completed_at = Column(DateTime)
+    mean_reward = Column(Float)
+    started_at = Column(DateTime(timezone=True), default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    train_log = Column(JSON, nullable=True)
 
-    user = relationship("User", back_populates="train_sessions")
     model = relationship("TrainedModel", back_populates="train_sessions")
-    progress_logs = relationship("TrainingProgress", back_populates="session", cascade="all, delete-orphan")
 
 # --------------------------
 # Database Utility Functions
@@ -120,8 +132,11 @@ def create_user(username: str, email: str, password: str):
         user = User(username=username, email=email)
         user.set_password(password)
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        db.flush()  # This assigns user.id without committing
+        stats = UserStats(user_id=user.id)
+        db.add(stats)
+        db.commit()  # One commit for both user and stats
+        db.refresh(user)  # Refresh to get the latest state
         return user
     finally:
         db.close()
@@ -146,9 +161,97 @@ def get_user_by_id(user_id: int):
     finally:
         db.close()
 
+# user statistics utilities
+def get_user_stats(user_id: int):
+    db = SessionLocal()
+    try:
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if not stats:
+            print(f"[WARN] No stats found for user_id={user_id}")
+            return None
+        return {
+            "tests_run": stats.tests_run,
+            "train_sessions_count": stats.train_sessions_count,
+            "trained_models_count": stats.trained_models_count
+        }
+    finally:
+        db.close()
 
+def increment_tests_run(user_id: int):
+    db = SessionLocal()
+    try:
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.tests_run += 1
+            db.commit()
+            return True
+        print(f"[WARN] UserStats not found for user_id={user_id}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] increment_tests_run failed: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+def increment_train_sessions_count(user_id: int):
+    db = SessionLocal()
+    try:
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.train_sessions_count += 1
+            db.commit()
+            return True
+        print(f"[WARN] UserStats not found for user_id={user_id}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] increment_train_sessions_count failed: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+def increment_models_count(user_id: int):
+    db = SessionLocal()
+    try:
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.trained_models_count += 1
+            db.commit()
+            return True
+        print(f"[WARN] UserStats not found for user_id={user_id}")
+        return False
+    except Exception as e:
+        print(f"[ERROR] increment_models_count failed: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+def update_user_stats(user_id:int):
+    """
+    Update user statistics for tests run, training sessions count, and trained models count.
+    If the stats entry does not exist, it will be created.
+    """
+    db = SessionLocal()
+    try:
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if not stats:
+            print(f"[WARN] No stats found for user_id={user_id}")
+            return None
+        stats.train_sessions_count += 1
+        stats.trained_models_count += 1
+
+        db.commit()
+        return True
+    except Exception as e:
+        print(f"[ERROR] update_user_stats failed: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
 # TrainedModel utilities
-def create_trained_model(name, model_path, algorithm, robotic_arm, user_id):
+def create_trained_model(name, model_path, algorithm, robotic_arm, user_id, timesteps=0, total_time=0.0, mean_reward=None):
     db = SessionLocal()
     try:
         model = TrainedModel(
@@ -156,12 +259,22 @@ def create_trained_model(name, model_path, algorithm, robotic_arm, user_id):
             model_path=model_path,
             algorithm=algorithm,
             robotic_arm=robotic_arm,
-            user_id=user_id
+            user_id=user_id,
+            total_timesteps=timesteps,
+            total_training_time=total_time,
+            final_mean_reward=mean_reward
         )
         db.add(model)
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.trained_models_count += 1
         db.commit()
         db.refresh(model)
         return model
+    except Exception as e:
+        print(f"Error creating/completing training model: {str(e)}")
+        db.rollback()
+        return None
     finally:
         db.close()
 
@@ -207,6 +320,9 @@ def delete_trained_model(user_id: int, model_name: str) -> bool:
             return False
 
         db.delete(model)
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.trained_models_count -= 1
         db.commit()
         return True
 
@@ -218,26 +334,29 @@ def delete_trained_model(user_id: int, model_name: str) -> bool:
     finally:
         db.close()
 
-# def updateModelPath(model_id: int, new_model_path: str):
-#     """Update the model path for a specific trained model."""
-#     db = SessionLocal()
-#     try:
-#         model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
-#         if not model:
-#             print(f"Model with ID {model_id} not found.")
-#             return False
+def update_trained_model(model_id: int, timesteps: int, total_time: float, mean_reward: float,new_model_path: str):
+    """Update the statistics of a trained model."""
+    db = SessionLocal()
+    try:
+        model = db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
+        if not model:
+            print(f"Model with ID {model_id} not found.")
+            return False
+        
+        model.model_path = new_model_path
+        model.total_timesteps += timesteps
+        model.total_training_time += total_time
+        model.final_mean_reward = mean_reward
+        db.commit()
+        return True
 
-#         model.model_path = new_model_path
-#         db.commit()
-#         return True
+    except Exception as e:
+        print(f"Error updating model stats for ID {model_id}: {str(e)}")
+        db.rollback()
+        return False
 
-#     except Exception as e:
-#         print(f"Error updating model path for ID {model_id}: {str(e)}")
-#         db.rollback()
-#         return False
-
-#     finally:
-#         db.close()
+    finally:
+        db.close()
 
 def model_rename(user_id: int, old_name: str, new_name: str) -> bool:
     """
@@ -286,41 +405,26 @@ def model_rename(user_id: int, old_name: str, new_name: str) -> bool:
 
      
 # TrainSession utilities
-def create_train_session(model_id, user_id, timesteps, total_time, mean_reward=None):
+def create_train_session(model_id,user_id,timesteps, total_time, mean_reward=None, train_log=None):
     """Create or complete a training session."""
     db = SessionLocal()
     try:
-        # Find any existing incomplete session
-        current_session = (
-            db.query(TrainSession)
-            .filter(TrainSession.model_id == model_id)
-            .filter(TrainSession.completed_at.is_(None))
-            .first()
+        now = datetime.now(timezone.utc)
+        current_session = TrainSession(
+            model_id=int(model_id),
+            timesteps=int(timesteps),
+            total_time=float(total_time),
+            mean_reward=float(mean_reward) if mean_reward is not None else None,
+            started_at=now,
+            completed_at=now,
+            train_log=train_log
         )
-
-        now = datetime.utcnow()
-
-        if current_session:
-            # Update the existing session with final values
-            current_session.timesteps = int(timesteps)
-            current_session.total_time = float(total_time)
-            if mean_reward is not None:
-                current_session.mean_reward = float(mean_reward)
-            current_session.completed_at = now
-        else:
-            # Create a new completed session if none exists
-            current_session = TrainSession(
-                model_id=int(model_id),
-                user_id=int(user_id),
-                timesteps=int(timesteps),
-                total_time=float(total_time),
-                mean_reward=float(mean_reward) if mean_reward is not None else None,
-                started_at=now,
-                completed_at=now
-            )
-            db.add(current_session)
-
+        db.add(current_session)
+        stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
+        if stats:
+            stats.train_sessions_count += 1
         db.commit()
+        db.refresh(current_session)
         return current_session
     except Exception as e:
         print(f"Error creating/completing training session: {str(e)}")
@@ -329,10 +433,10 @@ def create_train_session(model_id, user_id, timesteps, total_time, mean_reward=N
     finally:
         db.close()
 
-def get_model_sessions(model_id: int, currUserID: int):
+def get_model_sessions(model_id: int):
     db = SessionLocal()
     try:
-        return db.query(TrainSession).filter(TrainSession.model_id == model_id).filter(TrainSession.user_id == currUserID).all()
+        return db.query(TrainSession).filter(TrainSession.model_id == model_id).all()
     finally:
         db.close()
 
@@ -368,20 +472,11 @@ def log_training(model_name: str, mean_reward: float, current_timestep: int, use
                 user_id=user_id,
                 timesteps=0,  # Will be updated when training completes
                 total_time=0.0,  # Will be updated when training completes
-                started_at=datetime.utcnow()
+                started_at= datetime.now(timezone.utc)
             )
             db.add(current_session)
             db.commit()  # Commit to get the session ID
             db.refresh(current_session)
-
-        # Add a new progress log entry
-        progress = TrainingProgress(
-            session_id=current_session.id,
-            timestep=current_timestep,
-            mean_reward=mean_reward
-        )
-        db.add(progress)
-        db.commit()
     except Exception as e:
         print(f"Error logging training progress: {str(e)}")
         db.rollback()
