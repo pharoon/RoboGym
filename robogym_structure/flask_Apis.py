@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import time
-from FileStorage import upload_to_storage, delete_from_storage
+from FileStorage import upload_to_storage, delete_from_storage,download_from_storage
 # Load environment variables from Credentials.env
 load_dotenv('Credentials.env')
 
@@ -220,6 +220,88 @@ def api_train():
 
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
+@app.post("/continue_train")
+# @token_required
+def api_continue_train():
+    data = request.get_json()
+
+    model_id = data.get("model_id")
+    model_name = data.get("model_name")
+    timesteps = data.get("timesteps")
+    task_number = data.get("task_number")
+    currUserID = data.get('curr_user_id')
+
+    if not model_name or not timesteps or not task_number or not currUserID:
+        return jsonify({"status": "error", "message": "Missing required parameters"}), 400
+    try:
+        timesteps = int(timesteps)
+        task_number = int(task_number)
+        currUserID = int(currUserID)
+    except ValueError:
+        return "Invalid parameter types", 400
+
+    user_models_dir = f"trained_models/user_{currUserID}"
+    os.makedirs(user_models_dir, exist_ok=True)
+    local_model_path = f"{user_models_dir}/{model_name}.zip"
+    remote_model_path = f"user_{currUserID}/{model_name}.zip"
+
+    success, msg = download_from_storage("models", remote_model_path, local_model_path)
+    if not success:
+        return jsonify({"status": "error", "message": f"Failed to download model: {msg}"}), 500
+
+    current_timestep = 0
+
+    def event_stream():
+        nonlocal current_timestep
+        yield "data: 🔁 Continuing training...\n\n"
+        start_time = time.time()
+        logs = []
+        mean_reward = None
+
+        try:
+            for event in train_model_func(
+                model_name=model_name,
+                timesteps=timesteps,
+                task_number=task_number,
+                model_path=local_model_path
+            ):
+                line = event.strip().removeprefix("data: ").strip()
+
+                if line.startswith("REWARD_LOG::"):
+                    try:
+                        _, _, reward_str, timestep_str = line.split("::")
+                        mean_reward = float(reward_str)
+                        current_timestep = int(timestep_str)
+                        logs.append({
+                            "timestep": current_timestep,
+                            "mean_reward": mean_reward
+                        })
+                    except (ValueError, IndexError):
+                        pass
+
+                yield event
+
+            total_time = time.time() - start_time
+
+            # Upload updated model to Supabase
+            upload_to_storage("models", local_model_path, remote_model_path)
+
+            db.create_train_session(
+                model_id=model_id,
+                user_id=currUserID,
+                timesteps=timesteps,
+                total_time=total_time,
+                mean_reward=mean_reward,
+                train_log=json.dumps(logs)
+            )
+
+        except Exception as e:
+            yield f"data: ❌ Error: {str(e)}\n\n"
+            yield "event: end\ndata: failed\n\n"
+
+    return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
+
+
 @app.post("/models")
 # @token_required
 def api_list_models():
@@ -316,6 +398,27 @@ def api_upload_model():
             "status": "error",
             "message": f"Error uploading model: {str(e)}"
         }), 500
+
+@app.get("/download")
+# @token_required
+def api_download_model():
+    model_name = request.args.get("model_name")
+    local_model_path = request.args.get("local_model_path")
+    currUserID = request.args.get('curr_user_id')
+
+    if not model_name or not local_model_path or not currUserID:
+        return jsonify({"status": "error", "message": "Missing required parameters"}), 400
+    try:
+        currUserID = int(currUserID)
+    except ValueError:
+        return "Invalid parameter types", 400
+
+    remote_model_path = f"user_{currUserID}/{model_name}.zip"
+    success, msg = download_from_storage("models", remote_model_path, local_model_path)
+
+    if not success:
+        return jsonify({"status": "error", "message": f"Failed to download model: {msg}"}), 500
+    return jsonify({"status": "ok", "message": "Model downloaded successfully"}), 200
 
 @app.post("/getRewards")
 # @token_required
