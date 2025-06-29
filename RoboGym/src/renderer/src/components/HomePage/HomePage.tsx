@@ -6,15 +6,14 @@ import { toast, ToastContainer } from 'react-toastify'
 import { HomePageProps } from '@renderer/utils/interfaces'
 import { useNavigate } from 'react-router-dom'
 import LoadingScreen from '@renderer/utils/LoadingScreen'
-import { GetModels } from '@renderer/utils/FetchData'
 
 const HomePage: React.FC<HomePageProps> = (props) => {
   const { userProfile } = props
   const [showDeleteModel, setShowDeleteModel] = useState<boolean>(false)
-  const [activeModels, setActiveModels] = useState<number>(0)
   const [modalOpen, setModalOpen] = useState(false)
   const [pendingFilePath, setPendingFilePath] = useState<string | null>(null)
   const [uploading, setUploading] = useState<boolean>(false)
+  const [userStatus, setUserStatus] = useState<any>(null)
   const navigate = useNavigate()
   const handleFileUpload = async () => {
     // @ts-ignore
@@ -26,7 +25,6 @@ const HomePage: React.FC<HomePageProps> = (props) => {
   }
 
   const handleModelNameSubmit = (modelName: string) => {
-    console.log("We are here")
     setUploading(true)
     if (pendingFilePath) {
       fetch('http://localhost:5000/upload', {
@@ -51,8 +49,34 @@ const HomePage: React.FC<HomePageProps> = (props) => {
   
   useEffect(() => {
     const getActiveModels = async () => {
-      const models = await GetModels(userProfile.user_id ?? '-1')
-      setActiveModels(models.length)
+      try {
+        const userStatus = await fetch('http://localhost:5000/getUserStats', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            currUserID: userProfile.user_id
+          })
+        })
+        
+        if (!userStatus.ok) {
+          throw new Error(`HTTP error! status: ${userStatus.status}`)
+        }
+        
+        const userStatusData = await userStatus.json()
+        setUserStatus(userStatusData)
+      } catch (error) {
+        console.error('Error fetching user stats:', error)
+        // Set default values on error
+        setUserStatus({
+          stats: {
+            trained_models_count: 0,
+            train_sessions_count: 0,
+            tests_run: 0
+          }
+        })
+      }
     }
     getActiveModels()
   }, [userProfile.user_id])
@@ -68,17 +92,17 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         <div className="stat-card glass">
           <span className="material-icons">model_training</span>
           <h3>Active Models</h3>
-          <p className="stat-number">{activeModels}</p>
+          <p className="stat-number">{userStatus?.stats?.trained_models_count || 0}</p>
         </div>
         <div className="stat-card glass">
           <span className="material-icons">psychology</span>
           <h3>Training Sessions</h3>
-          <p className="stat-number">12</p>
+          <p className="stat-number">{userStatus?.stats?.train_sessions_count || 0}</p>
         </div>
         <div className="stat-card glass">
           <span className="material-icons">speed</span>
           <h3>Tests Run</h3>
-          <p className="stat-number">24</p>
+          <p className="stat-number">{userStatus?.stats?.tests_run || 0}</p>
         </div>
       </div>
 

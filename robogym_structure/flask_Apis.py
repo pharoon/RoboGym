@@ -16,7 +16,8 @@ from FileStorage import upload_to_storage, delete_from_storage,download_from_sto
 load_dotenv('Credentials.env')
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
+# Configure CORS to allow all origins for development
+CORS(app, origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"], supports_credentials=True)
 
 # Configure JWT
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')  # Change in production
@@ -198,7 +199,7 @@ def api_train():
 
             try:
                 db.create_train_session(
-                    model_id=trained_model.id,
+                    model_id=trained_model.id if trained_model else None,
                     user_id=currUserID,
                     timesteps=timesteps,
                     total_time=total_time,
@@ -289,8 +290,8 @@ def api_continue_train():
                 model_id=model_id,
                 timesteps=timesteps,
                 total_time=total_time,
-                mean_reward=mean_reward,
-               
+                mean_reward=mean_reward if mean_reward is not None else 0.0,
+                new_model_path=remote_model_path
             )
             db.create_train_session(
                 model_id=model_id,
@@ -340,7 +341,7 @@ def api_list_models():
                 'robotic_arm': str(model.robotic_arm.value) if hasattr(model.robotic_arm, 'value') else None,
                 'created_at': created_at,
                 'model_path': model.model_path,
-                'updated_at': model.updated_at.isoformat() if model.updated_at else None,
+                'updated_at': model.updated_at.isoformat() if model.updated_at is not None else None,
                 'total_training_time': model.total_training_time,
                 'final_mean_reward': model.final_mean_reward,
                 'total_timesteps': model.total_timesteps,
@@ -396,7 +397,7 @@ def api_upload_model():
         
         return jsonify({
             "status": "ok",
-            "model_id": trained_model.id,
+            "model_id": trained_model.id if trained_model else None,
             "message": "Model uploaded and saved to database successfully"
         })
     except Exception as e:
@@ -574,7 +575,7 @@ def api_test():
             yield f"data: ❌ test_model raised exception: {str(e)}\n\n"
         yield "event: end\ndata: done\n\n"
   
-        db.increment_tests_run(currUserID)
+        db.increment_tests_run(int(currUserID) if currUserID is not None else 0)
     
         # Start the test in a separate process
         Process(target=Test_Model, args=(model_name, task_name, int(episodes), user_models_dir)).start()
@@ -619,7 +620,7 @@ def api_get_model_sessions():
     
     if not currUserID or not isinstance(currUserID, int):
         return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
-    sessions = db.get_model_sessions(model_id)
+    sessions = db.get_model_sessions(model_id, currUserID)
     def session_to_dict(session):
         return {
             "id": session.id,
@@ -636,18 +637,33 @@ def api_get_model_sessions():
     sessions_list = [session_to_dict(s) for s in sessions]
     return jsonify({"status": "ok", "message": "Model sessions fetched successfully", "sessions": sessions_list}), 200
 
-@app.get("/getUserStats")
+@app.post("/getUserStats")
 # @token_required
 def api_get_user_stats():
-    currUserID = request.args.get("currUserID", type=int)
-    if not currUserID or not isinstance(currUserID, int):
-        return jsonify({"status": "error", "message": "Valid user ID is required"}), 400
+    try:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
+            return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
+        
+        currUserID = data.get("currUserID")
+        if not currUserID:
+            return jsonify({"status": "error", "message": "currUserID is required"}), 400
+        
+        try:
+            currUserID = int(currUserID)
+        except (ValueError, TypeError):
+            return jsonify({"status": "error", "message": "currUserID must be a valid integer"}), 400
+        
+        print("CurrUserID is ", currUserID, flush=True)
+        
+        stats = db.get_user_stats(currUserID)
+        if not stats:
+            return jsonify({"status": "error", "message": "User stats not found"}), 404
 
-    stats = db.get_user_stats(currUserID)
-    if not stats:
-        return jsonify({"status": "error", "message": "User stats not found"}), 404
-
-    return jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats}), 200
+        return jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats}), 200
+    except Exception as e:
+        print(f"Error in getUserStats: {str(e)}", flush=True)
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.post("/test1")
 # @token_required
