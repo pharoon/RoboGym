@@ -39,56 +39,47 @@ class RoboticArmEnv(gym.Env):
         p.resetSimulation()
         p.setGravity(0, 0, -9.81)
     
-        plane_id = p.loadURDF("plane.urdf")
+        self.add_industrial_floor()
         self.robot_id = p.loadURDF(self.robot_urdf, basePosition=[0, 0, 0], useFixedBase=True)
 
         # Load grabbable object
         if self.object_id is None:
-            self.object_id = p.loadURDF("cube_small.urdf", [0, 0, 0], globalScaling=1.0)
-        
+            self.object_id = p.loadURDF("sphere_small.urdf", [0, 0, 0], globalScaling=1.0)
 
+        self.object_id_2 = p.loadURDF("tray/traybox.urdf", [0.65, 0.3, 0.38], globalScaling=0.6)
+        self.table_source_id = p.loadURDF("table/table.urdf", [0.65, 0.4, 0.0], globalScaling=0.6)
+        self.table_target_id =  p.loadURDF("table/table.urdf", [0.65, -0.4, 0.0], globalScaling=0.6)
+
+       
+        
 
         TABLE_HALF_EXTENTS = [0.2, 0.2, 0.2] 
         TABLE_HEIGHT = TABLE_HALF_EXTENTS[2] * 2  
         OBJECT_HEIGHT = 0.05  
 
         
-        self.table_source_id = p.createMultiBody(
-            baseMass=0,
-            baseCollisionShapeIndex=p.createCollisionShape(
-                shapeType=p.GEOM_BOX,
-                halfExtents=TABLE_HALF_EXTENTS
-            ),
-            baseVisualShapeIndex=p.createVisualShape(
-                shapeType=p.GEOM_BOX,
-                halfExtents=TABLE_HALF_EXTENTS,
-                rgbaColor=[0.6, 0.3, 0.1, 1]
-            ),
-            basePosition=[0.65, 0.3, TABLE_HALF_EXTENTS[2]],  
-            useMaximalCoordinates=True
-        )
+        # self.table_source_id = p.createMultiBody(
+        #     baseMass=0,
+        #     baseCollisionShapeIndex=p.createCollisionShape(
+        #         shapeType=p.GEOM_BOX,
+        #         halfExtents=TABLE_HALF_EXTENTS
+        #     ),
+        #     baseVisualShapeIndex=p.createVisualShape(
+        #         shapeType=p.GEOM_BOX,
+        #         halfExtents=TABLE_HALF_EXTENTS,
+        #         rgbaColor=[0.6, 0.3, 0.1, 1]
+        #     ),
+        #     basePosition=[0.65, 0.3, TABLE_HALF_EXTENTS[2]],  
+        #     useMaximalCoordinates=True
+        # )
 
         # Place table (Y-)
-        self.table_target_id = p.createMultiBody(
-            baseMass=0,
-            baseCollisionShapeIndex=p.createCollisionShape(
-                shapeType=p.GEOM_BOX,
-                halfExtents=TABLE_HALF_EXTENTS
-            ),
-            baseVisualShapeIndex=p.createVisualShape(
-                shapeType=p.GEOM_BOX,
-                halfExtents=TABLE_HALF_EXTENTS,
-                rgbaColor=[0.2, 0.4, 0.7, 1]
-            ),
-            basePosition=[0.65, -0.3, TABLE_HALF_EXTENTS[2]],
-            useMaximalCoordinates=True
-        )
 
         p.resetDebugVisualizerCamera(
-            cameraDistance=1.5,
+            cameraDistance=1.26,
             cameraYaw=50,
-            cameraPitch=-35,
-            cameraTargetPosition=[0, 0, 0]
+            cameraPitch=-24,
+            cameraTargetPosition=[0.65, 0, 0.5]
         )
         
 
@@ -175,3 +166,25 @@ class RoboticArmEnv(gym.Env):
 
     def close(self):
         p.disconnect()
+
+    def add_industrial_floor(self):
+        FLOOR_EXTENTS = [5, 5, 0.01]  # 10m x 10m floor, 2cm thick
+        floor_color = [0.3, 0.3, 0.3, 1]  # Dark industrial gray
+
+        floor_visual = p.createVisualShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=FLOOR_EXTENTS,
+            rgbaColor=floor_color
+        )
+
+        floor_collision = p.createCollisionShape(
+            shapeType=p.GEOM_BOX,
+            halfExtents=FLOOR_EXTENTS
+        )
+
+        self.floor_id = p.createMultiBody(
+            baseMass=0,
+            baseCollisionShapeIndex=floor_collision,
+            baseVisualShapeIndex=floor_visual,
+            basePosition=[0, 0, -FLOOR_EXTENTS[2]]  # Flat at Z=0
+        )
