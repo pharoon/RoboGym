@@ -88,11 +88,5 @@
         "algorithm": "PPO",
         "created_at": "2025-06-29T14:00:10.834020",
         "path": "trained_models/user_3/dddd.zip"
-    },
-    "asddddd": {
-        "filename": "asddddd.zip",
-        "algorithm": "PPO",
-        "created_at": "2025-06-29T14:08:52.586617",
-        "path": "trained_models/user_3/asddddd.zip"
     }
 }

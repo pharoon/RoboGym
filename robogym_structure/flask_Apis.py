@@ -285,7 +285,13 @@ def api_continue_train():
 
             # Upload updated model to Supabase
             upload_to_storage("models", local_model_path, remote_model_path)
-
+            db.update_trained_model(
+                model_id=model_id,
+                timesteps=timesteps,
+                total_time=total_time,
+                mean_reward=mean_reward,
+               
+            )
             db.create_train_session(
                 model_id=model_id,
                 user_id=currUserID,
@@ -600,7 +606,7 @@ def api_rename_model():
 @app.post("/getModelSessions")
 # @token_required
 def api_get_model_sessions():
-    print("We are here", flush=True)
+    # print("We are here", flush=True)
     data = request.get_json(silent=True)
     if not data or not isinstance(data, dict):
         return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400

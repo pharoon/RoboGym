@@ -209,44 +209,49 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
         </div>
         <div className="dialog-body sessions-modal-body">
           {sessions.length === 0 ? (
-            <p>No sessions found for this model.</p>
+            <div style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>
+              <span className="material-icons" style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                folder_open
+              </span>
+              <p>No training sessions found for this model.</p>
+            </div>
           ) : (
             <div className="sessions-modal-content">
-              <div className="sessions-sidebar">
-                {sessions.map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`session-index ${selectedSessionIdx === idx ? 'selected' : ''}`}
-                    onClick={() => setSelectedSessionIdx(idx)}
-                  >
-                    Session {idx + 1}
+              {sessions.map((session, idx) => (
+                <div 
+                  key={idx}
+                  className={`session-card ${selectedSessionIdx === idx ? 'selected' : ''}`}
+                  onClick={() => setSelectedSessionIdx(idx)}
+                >
+                  <div className="session-header">
+                    <span className="material-icons">science</span>
+                    <h4>Session {idx + 1}</h4>
                   </div>
-                ))}
-              </div>
-              <div className="session-details">
-                {sessions[selectedSessionIdx] && (
-                  <>
-                    <div>
-                      <b>Started At:</b>{' '}
-                      {new Date(sessions[selectedSessionIdx].started_at).toLocaleString()}
+                  
+                  <div className="session-info">
+                    <div className="info-item">
+                      <span className="material-icons">calendar_today</span>
+                      <span>{new Date(session.started_at).toLocaleDateString()}</span>
                     </div>
-                    <div>
-                      <b>Completed At:</b>{' '}
-                      {new Date(sessions[selectedSessionIdx].completed_at).toLocaleString()}
+                    <div className="info-item">
+                      <span className="material-icons">timer</span>
+                      <span>{Number(session.total_time).toFixed(2)}s</span>
                     </div>
-                    <div>
-                      <b>Timesteps:</b> {sessions[selectedSessionIdx].timesteps}
+                    <div className="info-item">
+                      <span className="material-icons">trending_up</span>
+                      <span>{session.timesteps} steps</span>
                     </div>
-                    <div>
-                      <b>Total Time:</b>{' '}
-                      {Number(sessions[selectedSessionIdx].total_time).toFixed(2)} seconds
+                    <div className="info-item">
+                      <span className="material-icons">star</span>
+                      <span>Reward: {session.mean_reward.toFixed(2)}</span>
                     </div>
-                    <div>
-                      <b>Mean Reward:</b> {sessions[selectedSessionIdx].mean_reward}
-                    </div>
-                  </>
-                )}
-              </div>
+                  </div>
+
+                  <button className="view-details-button" title="View Details">
+                    <span className="material-icons">visibility</span>
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
