@@ -10,6 +10,27 @@ interface ModelCardProps {
   onViewSessions: (modelID: number) => void
 }
 
+// Utility function to format seconds into appropriate time units
+const formatTrainingTime = (seconds: number): string => {
+  if (seconds < 60) {
+    return `${Math.round(seconds)} seconds`
+  } else if (seconds < 3600) {
+    const minutes = Math.round(seconds / 60)
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`
+  } else if (seconds < 86400) {
+    const hours = Math.round(seconds / 3600)
+    return `${hours} hour${hours !== 1 ? 's' : ''}`
+  } else {
+    const days = Math.round(seconds / 86400)
+    return `${days} day${days !== 1 ? 's' : ''}`
+  }
+}
+
+// Utility function to format reward without decimals
+const formatReward = (reward: number): string => {
+  return Math.round(reward).toString()
+}
+
 const ModelCard: React.FC<ModelCardProps> = ({
   model,
   onDownload,
@@ -61,15 +82,15 @@ const ModelCard: React.FC<ModelCardProps> = ({
       </div>
       <div className="info-row">
         <span className="material-icons">timer</span>
-        <p>Total Trained Time: 12 Minutes</p>
+        <p>Total Trained Time: {formatTrainingTime(model.total_training_time)}</p>
       </div>
       <div className="info-row">
         <span className="material-icons">timeline</span>
-        <p>Total Time Steps: {123 }</p>
+        <p>Total Time Steps: {model.total_timesteps}</p>
       </div>
       <div className="info-row">
         <span className="material-icons">star</span>
-        <p>Max Reward: {54 }</p>
+        <p>Max Reward: {formatReward(model.final_mean_reward)}</p>
       </div>
     </div>
     <div className="model-card-actions">

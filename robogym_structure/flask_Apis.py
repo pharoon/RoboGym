@@ -448,7 +448,7 @@ def api_get_rewards():
 
         # Start the visualization process with user-specific paths
         user_models_dir = f"trained_models/user_{currUserID}"
-        Process(target=GetModelRewards, args=(model_name, user_models_dir)).start()
+        # Process(target=GetModelRewards, args=(model_name, user_models_dir)).start()
         
         return jsonify({
             "status": "ok",
@@ -463,17 +463,17 @@ def api_get_rewards():
 
 @app.post("/compareModels")
 # @token_required
-def api_compare_Models(current_user):
+def api_compare_Models():
     try:
         data = request.get_json(silent=True)
         if not data or 'first_model' not in data or 'second_model' not in data:
             return jsonify({"status": "error", "message": "Both model names are required"}), 400
-
+        currUserID = data["currUserID"]
         first_model = data["first_model"]
         second_model = data["second_model"]
 
         # Verify both models belong to the user
-        user_models = db.get_user_models(current_user.id)
+        user_models = db.get_user_models(currUserID)
         user_model_names = [model.name for model in user_models]
         
         if first_model not in user_model_names or second_model not in user_model_names:
@@ -483,8 +483,8 @@ def api_compare_Models(current_user):
             }), 404
 
         # Get training history for both models
-        first_logs = db.fetch_logs(first_model, current_user.id)
-        second_logs = db.fetch_logs(second_model, current_user.id)
+        first_logs = db.fetch_logs(first_model, currUserID)
+        second_logs = db.fetch_logs(second_model, currUserID)
 
         if not first_logs or not second_logs:
             return jsonify({
@@ -493,12 +493,12 @@ def api_compare_Models(current_user):
             }), 404
 
         # Start comparison visualization with user-specific paths
-        user_models_dir = f"trained_models/user_{current_user.id}"
-        Process(target=compareModels, args=(
-            first_model,
-            second_model,
-            user_models_dir
-        )).start()
+        user_models_dir = f"trained_models/user_{currUserID}"
+        # Process(target=compareModels, args=(
+        #     first_model,
+        #     second_model,
+        #     user_models_dir
+        # )).start()
 
         return jsonify({
             "status": "ok",

@@ -40,4 +40,7 @@ export type Model = {
     model_path: string 
     name: string
     robotic_arm:string
+    total_timesteps:any
+    total_training_time:any
+    final_mean_reward:any
 }

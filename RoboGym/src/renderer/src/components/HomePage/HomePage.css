@@ -130,6 +130,7 @@
 
 .welcome-section {
   padding: 2rem;
+  min-height: fit-content;
   border-radius: 1rem;
   position: relative;
   overflow: hidden;
