@@ -96,6 +96,16 @@ ipcMain.handle('open-file-dialog', async () => {
   return result.filePaths[0];
 });
 
+ipcMain.handle('save-file-dialog', async (event, defaultName: string) => {
+  const result = await dialog.showSaveDialog({
+    defaultPath: defaultName,
+    filters: [{ name: 'ZIP Files', extensions: ['zip'] }],
+  });
+
+  if (result.canceled || !result.filePath) return null;
+  return result.filePath;
+});
+
   const pythonFlask = path.join(__dirname,"..","..","..", "robogym_structure", "flask_Apis.py")
   console.log(pythonFlask)
   pyProc = spawn('python', [pythonFlask]);

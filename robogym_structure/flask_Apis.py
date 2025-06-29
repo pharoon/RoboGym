@@ -653,42 +653,27 @@ def api_get_user_stats():
         print(f"DEBUG: Request data: {data}")
         
         if not data or not isinstance(data, dict):
-            response = jsonify({"status": "error", "message": "Invalid or missing JSON data"})
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response, 400
+            return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
         
         currUserID = data.get("currUserID")
         if not currUserID:
-            response = jsonify({"status": "error", "message": "currUserID is required"})
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response, 400
+            return jsonify({"status": "error", "message": "currUserID is required"}), 400
         
         try:
             currUserID = int(currUserID)
         except (ValueError, TypeError):
-            response = jsonify({"status": "error", "message": "currUserID must be a valid integer"})
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response, 400
+            return jsonify({"status": "error", "message": "currUserID must be a valid integer"}), 400
         
         print("CurrUserID is ", currUserID, flush=True)
         
         stats = db.get_user_stats(currUserID)
         if not stats:
-            response = jsonify({"status": "error", "message": "User stats not found"})
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response, 404
+            return jsonify({"status": "error", "message": "User stats not found"}), 404
 
-        response = jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
-        print(f"DEBUG: Sending response: {response.get_json()}")
-        return response, 200
+        return jsonify({"status": "ok", "message": "User stats fetched successfully", "stats": stats})
     except Exception as e:
         print(f"Error in getUserStats: {str(e)}", flush=True)
-        response = jsonify({"status": "error", "message": f"Internal server error: {str(e)}"})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response, 500
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
 @app.post("/test1")
 # @token_required

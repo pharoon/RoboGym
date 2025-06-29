@@ -13,7 +13,8 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electronAPI', {
       initiateWebSocketConnection: (url:string) => ipcRenderer.send('initiate-websocket-connection', url),
       startPyBullet: () => ipcRenderer.send('show-gui'),
-      openFileDialog: () => ipcRenderer.invoke('open-file-dialog')
+      openFileDialog: () => ipcRenderer.invoke('open-file-dialog'),
+      saveFileDialog: (defaultName: string) => ipcRenderer.invoke('save-file-dialog', defaultName)
     });
   } catch (error) {
     console.error(error)

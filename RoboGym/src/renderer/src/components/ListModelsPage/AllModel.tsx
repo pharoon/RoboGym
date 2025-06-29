@@ -57,9 +57,50 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
       .finally(() => setLoading(false))
   }
 
-  const handleDownload = (modelName: string) => {
-    // Placeholder for download logic
-    toast.info(`Download for ${modelName} not implemented yet.`)
+  const handleDownload = async (modelName: string) => {
+    try {
+      // Open save dialog to let user choose download location
+      const savePath = await window.electronAPI.saveFileDialog(`${modelName}.zip`)
+      
+      if (!savePath) {
+        // User cancelled the dialog
+        return
+      }
+
+      setLoading(true)
+      setLoadingText('Downloading model ...')
+
+      // Call the download API with required parameters
+      const params = new URLSearchParams({
+        model_name: modelName,
+        local_model_path: savePath,
+        curr_user_id: userProfile.user_id?.toString() || '-1'
+      })
+
+      const response = await fetch(`http://localhost:5000/download?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download model')
+      }
+
+      const data = await response.json()
+      
+      if (data.status === 'ok') {
+        toast.success('Model downloaded successfully')
+      } else {
+        throw new Error(data.message || 'Download failed')
+      }
+    } catch (err) {
+      console.error('Error downloading model:', err)
+      toast.error('Failed to download model')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleRenameClick = (modelName: string) => {
