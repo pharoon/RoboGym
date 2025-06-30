@@ -39,7 +39,14 @@ const HomePage: React.FC<HomePageProps> = (props) => {
         })
       })
         .then((res) => res.json())
-        .then(() => toast.success("Model has been uploaded successfully"))
+        .then((response) => {
+          console.log(response)
+          if(response.status === "error"){
+            toast.error(response.message)
+          }else{
+            toast.success(response.message)
+          }
+        })
         .catch((err) => console.error('Upload error:', err))
         .finally(() => setUploading(false))
     }

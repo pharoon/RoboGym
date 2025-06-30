@@ -172,7 +172,6 @@ def api_train():
                             "timestep": current_timestep,
                             "mean_reward": mean_reward
                         })
-                        print("Logs are ", logs, flush=True)
                         # db.log_training(
                         #     model_name=logged_model_name,
                         #     mean_reward=mean_reward,
@@ -368,7 +367,6 @@ def api_upload_model():
     modelName = data.get("ModelName")
     currUserID = data.get("currUserID")
 
-    print("Data is ", data, flush=True)
     
     if not data:
         return jsonify({"status": "error", "message": "No data provided"}), 400

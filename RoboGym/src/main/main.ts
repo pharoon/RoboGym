@@ -3,6 +3,7 @@ import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { spawn } from 'child_process'
+import kill from 'tree-kill';
 let pyProc;
 function createWindow(): void {
 
@@ -48,6 +49,17 @@ function createWindow(): void {
   }
 
   console.log("Yarab")
+  const pythonFlask = path.join(__dirname,"..","..","..", "robogym_structure", "flask_Apis.py")
+  console.log(pythonFlask)
+  pyProc = spawn('python', [pythonFlask]);
+
+  pyProc.stdout.on('data', (data) => {
+    console.log(`[Python] ${data}`);
+  });
+
+  pyProc.stderr.on('data', (data) => {
+    console.error(`[Python Error] ${data}`);
+  });
   mainWindow.once('ready-to-show', () => {
     setTimeout(() => {
       splashWindow.destroy();
@@ -106,19 +118,15 @@ ipcMain.handle('save-file-dialog', async (event, defaultName: string) => {
   return result.filePath;
 });
 
-  const pythonFlask = path.join(__dirname,"..","..","..", "robogym_structure", "flask_Apis.py")
-  console.log(pythonFlask)
-  pyProc = spawn('python', [pythonFlask]);
-
-  pyProc.stdout.on('data', (data) => {
-    console.log(`[Python] ${data}`);
-  });
-
-  pyProc.stderr.on('data', (data) => {
-    console.error(`[Python Error] ${data}`);
-  });
+  
 })
 
+app.on('quit', () => {
+  if (pyProc && pyProc.pid) {
+    console.log("Killing Python process tree...");
+    kill(pyProc.pid, 'SIGTERM');
+  }
+});
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
