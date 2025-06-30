@@ -5,6 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import { spawn } from 'child_process'
 import kill from 'tree-kill';
 let pyProc;
+let pythonReady = false;
 function createWindow(): void {
 
   const splashWindow = new BrowserWindow({
@@ -54,17 +55,31 @@ function createWindow(): void {
   pyProc = spawn('python', [pythonFlask]);
 
   pyProc.stdout.on('data', (data) => {
-    console.log(`[Python] ${data}`);
-  });
-
-  pyProc.stderr.on('data', (data) => {
-    console.error(`[Python Error] ${data}`);
-  });
-  mainWindow.once('ready-to-show', () => {
-    setTimeout(() => {
+    const output = data.toString();
+    console.log(`[Python] ${output}`);
+  
+    if (!pythonReady && output.includes("Debugger PIN")) {
+      pythonReady = true;
       splashWindow.destroy();
       mainWindow.show();
-    }, 4000); 
+    }
+  });
+  
+  pyProc.stderr.on('data', (data) => {
+    const output = data.toString();
+    console.error(`[Python Error] ${output}`);
+  
+    if (!pythonReady && output.includes("Debugger PIN")) {
+      pythonReady = true;
+      splashWindow.destroy();
+      mainWindow.show();
+    }
+  });
+  mainWindow.once('ready-to-show', () => {
+    // setTimeout(() => {
+    //   splashWindow.destroy();
+    //   mainWindow.show();
+    // }, 4000); 
   });
 }
 
