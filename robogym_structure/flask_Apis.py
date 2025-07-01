@@ -138,15 +138,10 @@ def api_train():
     except ValueError:
         return "Invalid parameter types", 400
 
-    # Create user-specific directories if they don't exist
     user_models_dir = f"trained_models/user_{currUserID}"
-    # user_logs_dir = f"logs/user_{currUserID}"
     os.makedirs(user_models_dir, exist_ok=True)
-    # os.makedirs(user_logs_dir, exist_ok=True)
 
     local_model_path = f"{user_models_dir}/{model_name}.zip"
-    # Create a trained model record in the database
-    
     
     current_timestep = 0
 
@@ -156,7 +151,6 @@ def api_train():
         start_time = time.time()
         mean_reward = None
         logs = []
-
         try:
             for event in train_model_func(
                 model_name=model_name,
@@ -167,28 +161,29 @@ def api_train():
                 batch_size=batch_size,
                 n_steps=n_steps
             ):
-                # Remove 'data: ' prefix and process log lines
                 line = event.strip().removeprefix("data: ").strip()
 
-                if line.startswith("REWARD_LOG::"):
+                if line.startswith("@timeStep:"):
                     try:
-                        _, logged_model_name, reward_str, timestep_str = line.split("::")
-                        mean_reward = float(reward_str)
-                        current_timestep = int(timestep_str)
-                        logs.append({
-                            "timestep": current_timestep,
-                            "mean_reward": mean_reward
-                        })
-                        # db.log_training(
-                        #     model_name=logged_model_name,
-                        #     mean_reward=mean_reward,
-                        #     current_timestep=current_timestep,
-                        #     user_id=currUserID
-                        # )
+                        # Parse format: "@timeStep: 10420 -> meanReward: -1543.2293747058823"
+                        parts = line.split(" -> ")
+                        if len(parts) == 2:
+                            timestep_part = parts[0].replace("@timeStep:", "").strip()
+                            reward_part = parts[1].replace("meanReward:", "").strip()
+                            
+                            current_timestep = int(timestep_part)
+                            mean_reward = float(reward_part)
+                            
+                            logs.append({
+                                "timestep": current_timestep,
+                                "mean_reward": mean_reward
+                            })
+                            print("Mean reward is now ", mean_reward)
+                      
                     except (ValueError, IndexError):
                         pass  # Ignore malformed reward logs
 
-                yield event  # Pass the full SSE line back to the frontend
+                yield event 
             # Save the final training session
             total_time = time.time() - start_time
             remote_model_path = f"user_{currUserID}/{model_name}.zip"
@@ -219,12 +214,6 @@ def api_train():
             except Exception as e:
                 return jsonify({'message': f'Error creating training session: {str(e)}'}), 500
             
-
-           
-
-            # Use The Logs to update the database
-            print("Final logs:", logs, flush=True)
-
         except Exception as e:
             yield f"data: ❌ Error: {str(e)}\n\n"
             yield "event: end\ndata: failed\n\n"
@@ -283,15 +272,21 @@ def api_continue_train():
             ):
                 line = event.strip().removeprefix("data: ").strip()
 
-                if line.startswith("REWARD_LOG::"):
+                if line.startswith("@timeStep:"):
                     try:
-                        _, _, reward_str, timestep_str = line.split("::")
-                        mean_reward = float(reward_str)
-                        current_timestep = int(timestep_str)
-                        logs.append({
-                            "timestep": current_timestep,
-                            "mean_reward": mean_reward
-                        })
+                        # Parse format: "@timeStep: 10420 -> meanReward: -1543.2293747058823"
+                        parts = line.split(" -> ")
+                        if len(parts) == 2:
+                            timestep_part = parts[0].replace("@timeStep:", "").strip()
+                            reward_part = parts[1].replace("meanReward:", "").strip()
+                            
+                            current_timestep = int(timestep_part)
+                            mean_reward = float(reward_part)
+                            
+                            logs.append({
+                                "timestep": current_timestep,
+                                "mean_reward": mean_reward
+                            })
                     except (ValueError, IndexError):
                         pass
 

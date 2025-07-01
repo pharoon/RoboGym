@@ -180,6 +180,7 @@
 
 /* Glass card effect for form sections */
 .TrainForm, .TrainResults {
+  overflow-y: auto;
   background: rgba(31, 41, 55, 0.7);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);

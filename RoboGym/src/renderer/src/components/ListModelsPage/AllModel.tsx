@@ -375,7 +375,7 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
                     </div>
                     <div className="info-item">
                       <span className="material-icons">star</span>
-                      <span>Reward: {session.mean_reward.toFixed(2)}</span>
+                      <span>Reward: {session.mean_reward ? session.mean_reward.toFixed(2) : 'N/A'}</span>
                     </div>
                   </div>
 
@@ -469,11 +469,11 @@ const AllModel: React.FC<AllDataProps> = ({ userProfile }) => {
                 </div>
                 <div className="stat-item">
                   <span className="stat-label">Max Reward:</span>
-                  <span className="stat-value">{Math.max(...sessionDetails.map(d => d.mean_reward)).toFixed(2)}</span>
+                  <span className="stat-value">{sessionDetails.length > 0 ? Math.max(...sessionDetails.map(d => d.mean_reward || 0)).toFixed(2) : 'N/A'}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-label">Min Reward:</span>
-                  <span className="stat-value">{Math.min(...sessionDetails.map(d => d.mean_reward)).toFixed(2)}</span>
+                  <span className="stat-value">{sessionDetails.length > 0 ? Math.min(...sessionDetails.map(d => d.mean_reward || 0)).toFixed(2) : 'N/A'}</span>
                 </div>
               </div>
             </div>

@@ -9,6 +9,8 @@ import time
 from typing import Optional
 import io
 import sys
+import queue
+import threading
 
 TASK_MAP = {
     "pick_and_place": PickAndPlaceTask,
@@ -23,24 +25,33 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
     """
-    Custom callback to save the best model based on training reward.
+    Custom callback to save the best model based on training reward and send reward updates in real time.
     """
-    def __init__(self, check_freq: int, save_path: str, model_name: str,verbose=1):
+    def __init__(self, check_freq: int, save_path: str, model_name: str, message_queue=None, verbose=1):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.save_path = save_path
         self.best_mean_reward = -float("inf")
         self.model_name = model_name
-        
+        self.message_queue = message_queue 
 
     def _on_step(self) -> bool:
         if self.n_calls % self.check_freq == 0:
             if len(self.model.ep_info_buffer) > 0:
                 mean_reward = sum([ep["r"] for ep in self.model.ep_info_buffer]) / len(self.model.ep_info_buffer)
-                print(f"REWARD_LOG::{self.model_name}::{mean_reward}::{self.num_timesteps}", flush=True)
+                if self.message_queue:
+                    try:
+                        self.message_queue.put_nowait(f"data: @timeStep: {self.num_timesteps} -> meanReward: {mean_reward}\n\n")
+
+                    except queue.Full:
+                        pass  
                 if mean_reward > self.best_mean_reward:
                     self.best_mean_reward = mean_reward
-                    print("New best reward! Saving model...")
+                    if self.message_queue:
+                        try:
+                            self.message_queue.put_nowait(f"data: New best reward! Saving model...\n\n")
+                        except queue.Full:
+                            pass
                     self.model.save(self.save_path)
         return True
 
@@ -59,11 +70,9 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="
 
     task_instance.env = env  
     
-    # Use custom path if provided, otherwise use default
     if model_path is None:
         model_path = os.path.join(MODELS_DIR, f"{model_name}.zip")
     
-    # Ensure the directory exists
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
     
     if os.path.exists(model_path):
@@ -87,23 +96,44 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="
             max_grad_norm=0.5
         )
 
+    message_queue = queue.Queue(maxsize=100)  
+    
     save_callback = SaveOnBestTrainingRewardCallback(
         check_freq=10,
-        save_path=os.path.splitext(model_path)[0],  # Remove .zip extension
-        model_name=model_name
+        save_path=os.path.splitext(model_path)[0],  
+        model_name=model_name,
+        message_queue=message_queue
     )
-    # Save original stdout
-    original_stdout = sys.stdout
-    sys.stdout = io.StringIO()  # Redirect stdout
 
-    try:
-        model.learn(total_timesteps=total_timesteps, callback=save_callback)
-        output = sys.stdout.getvalue()
-    finally:
-        sys.stdout = original_stdout
+    original_stdout = sys.stdout
+    sys.stdout = io.StringIO()  
+
+    training_done = threading.Event()
+    
+    def training_thread():
+        try:
+            model.learn(total_timesteps=total_timesteps, callback=save_callback)
+        finally:
+            training_done.set()
+
+    train_thread = threading.Thread(target=training_thread)
+    train_thread.start()
+
+    while not training_done.is_set() or not message_queue.empty():
+        try:
+            message = message_queue.get(timeout=0.1)
+            yield message
+        except queue.Empty:
+            continue
+
+    train_thread.join()
+    
+    output = sys.stdout.getvalue()
+    sys.stdout = original_stdout
 
     for line in output.splitlines():
-        yield f"data: {line}\n\n"
+        if line.strip():  
+            yield f"data: {line}\n\n"
 
     model.save(model_path)
     mm.save_model(model, model_name, model_path=model_path)

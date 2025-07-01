@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import './Train.css'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { TrainProps } from '@renderer/utils/interfaces'
@@ -13,15 +13,19 @@ const Train:React.FC<TrainProps> = (props) => {
   const [continueTraining,_] = useState<boolean>(searchParams[0].get('continueTraining') === 'true')
   const [modelID, __] = useState<number>(Number(searchParams[0].get('modelID') ?? 0))
   const [TimeSteps, setTimeSteps] = useState<string>()
-  const [learningRate, setLearningRate] = useState<string>()
-  const [n_steps, setN_Steps] = useState<Number>()
-  const [batchSize, setBatchSize] = useState<Number>()
+  const [learningRate, setLearningRate] = useState<string>("0.001")
+  const [n_steps, setN_Steps] = useState<Number>(2048)
+  const [batchSize, setBatchSize] = useState<Number>(64)
   const [Task, setTask] = useState<number>()
   const [trainingLogs, setTrainigLogs] = useState<string>()
   const [isTraining, setIsTraining] = useState<boolean>(false)
+  const [currentTimesteps, setCurrentTimesteps] = useState<number>(0)
+
+  const logsArea = useRef<HTMLTextAreaElement>(null)
 
   const navigate = useNavigate()
   const startTraining = () => {
+    setTrainigLogs("Training Started...")
     if (!modelName || !TimeSteps || !Task || !learningRate || !batchSize || !n_steps) {
       toast.warn("Please make sure all fields are entered before training")
       return
@@ -33,6 +37,10 @@ const Train:React.FC<TrainProps> = (props) => {
 
     eventSource.onmessage = (event) => {
       console.log(event.data)
+      if(event.data.startsWith('@timeStep:')){
+        const currentTimeSteps = event.data.split('->')[0].split(':')[1].trim()
+        setCurrentTimesteps(Number(currentTimeSteps))
+      }
       setTrainigLogs((prev) => prev + event.data + '\n')
     }
 
@@ -50,6 +58,12 @@ const Train:React.FC<TrainProps> = (props) => {
     eventSource.close()
   }
   }
+
+  useEffect(() => {
+    if (logsArea.current) {
+      logsArea.current.scrollTop = logsArea.current.scrollHeight
+    }
+  }, [trainingLogs])
   return (
     <div className="RoboGym-Train">
       <ToastContainer position='bottom-left'/>
@@ -123,12 +137,20 @@ const Train:React.FC<TrainProps> = (props) => {
       </div>
       <div className="TrainResults">
         <textarea
+          ref={logsArea}
           value={trainingLogs}
           readOnly
           placeholder="Logs of the training process appears here"
         />
         <div className="Buttons">
-          <button onClick={startTraining}>StartTrainig</button>
+          <button onClick={startTraining}>
+            {isTraining ? 
+            <>
+            <div className="spinner"></div>
+              {Math.min(((currentTimesteps / (Number(TimeSteps) > Number(n_steps) ? Number(TimeSteps) : Number(n_steps)) * 100)), 100).toFixed(1)}%
+            </>
+            : 'Start Training'}
+          </button>
           <button
             onClick={() => {
               navigate('/HomePage')
@@ -137,12 +159,12 @@ const Train:React.FC<TrainProps> = (props) => {
             Return Back
           </button>
         </div>
-        {isTraining && (
+        {/* {isTraining && (
           <div className="spinner-container">
             <div className="spinner"></div>
             <p>Training in progress...</p>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   )
