@@ -19,9 +19,9 @@ def initialize():
     os.makedirs("logs", exist_ok=True)
     print(" Directories and database initialized.")
 
-def train(model_name, timesteps, task_number, model_path=None):
+def train(model_name, timesteps, task_number, learning_rate, batch_size, n_steps, model_path=None):
     task_name = TASK_CHOICES[task_number]
-    yield from train_model(timesteps, model_name, task_name, model_path=model_path)
+    yield from train_model(timesteps, model_name, task_name, model_path=model_path, learning_rate=learning_rate, batch_size=batch_size, n_steps=n_steps)
     yield "data:\n\n"  # <-- this dummy message helps flush the stream
     yield "event: end\ndata: done\n\n"
 

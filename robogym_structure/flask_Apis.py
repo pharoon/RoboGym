@@ -125,6 +125,10 @@ def api_train():
     timesteps = request.args.get("timesteps")
     task_number = request.args.get("task_number")
     currUserID = request.args.get('curr_user_id')
+    learningRate = request.args.get('learning_rate')
+    n_steps = request.args.get('n_steps')
+    batch_size = request.args.get('batch_size')
+
     if not model_name or not timesteps or not task_number:
         return "Missing parameters", 400
 
@@ -158,7 +162,10 @@ def api_train():
                 model_name=model_name,
                 timesteps=timesteps,
                 task_number=task_number,
-                model_path=local_model_path
+                model_path=local_model_path,
+                learning_rate=learningRate,
+                batch_size=batch_size,
+                n_steps=n_steps
             ):
                 # Remove 'data: ' prefix and process log lines
                 line = event.strip().removeprefix("data: ").strip()
@@ -232,6 +239,9 @@ def api_continue_train():
     timesteps = request.args.get("timesteps")
     task_number = request.args.get("task_number")
     currUserID = request.args.get('curr_user_id')
+    learningRate = request.args.get('learning_rate')
+    n_steps = request.args.get('n_steps')
+    batch_size = request.args.get('batch_size')
 
     if not model_name or not timesteps or not task_number or not currUserID:
         return jsonify({"status": "error", "message": "Missing required parameters"}), 400
@@ -266,7 +276,10 @@ def api_continue_train():
                 model_name=model_name,
                 timesteps=timesteps,
                 task_number=task_number,
-                model_path=local_model_path
+                model_path=local_model_path,
+                learning_rate=learningRate,
+                batch_size=batch_size,
+                n_steps=n_steps
             ):
                 line = event.strip().removeprefix("data: ").strip()
 

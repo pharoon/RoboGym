@@ -45,7 +45,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         return True
 
 
-def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="pick_and_place", model_path=None):
+def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="pick_and_place", model_path=None, learning_rate=1e-4, n_steps=2048, batch_size=64):
     yield(f"data: Starting training for model={model_name} on task={task_name} for {total_timesteps} timesteps\n\n")
 
     task_class = TASK_MAP.get(task_name)
@@ -76,9 +76,9 @@ def train_model(total_timesteps=10000, model_name="ppo_robotic_arm", task_name="
             env,
             verbose=1,
             tensorboard_log=LOGS_DIR,
-            learning_rate=1e-4,     
-            n_steps=2048,
-            batch_size=64,
+            learning_rate=float(learning_rate),     
+            n_steps=int(n_steps),
+            batch_size=int(batch_size),
             gamma=0.99,
             gae_lambda=0.95,
             clip_range=0.2,
