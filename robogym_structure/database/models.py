@@ -5,18 +5,14 @@ from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
 from database.Enums import AlgorithmType,RoboticArmType
-import enum
+from database.config import DATABASE_URL  
 import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()   
 
 
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://postgres.xljntaujspiljiczjzzh:3aCXHe0fDQx0gzNL@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
-# SQLAlchemy setup
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

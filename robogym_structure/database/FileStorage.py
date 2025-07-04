@@ -1,22 +1,16 @@
 from supabase import create_client
 import os
-from dotenv import load_dotenv
 from pathlib import Path
+from database.config import SUPABASE_URL, SUPABASE_KEY
 
 class FileManager:
-    def __init__(self, env_path=None):
-        # Load environment variables from file if provided
-        if env_path is None:
-            env_path = Path(__file__).parent / "Credentials.env"
-        load_dotenv(dotenv_path=env_path)
+    def __init__(self):
+            if not SUPABASE_URL or not SUPABASE_KEY:
+                raise ValueError("Supabase credentials are missing or invalid.")
 
-        self.supabase_url ="https://xljntaujspiljiczjzzh.supabase.co"
-        self.supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhsam50YXVqc3BpbGppY3pqenpoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTAxMDU1NywiZXhwIjoyMDY2NTg2NTU3fQ.26xJZp3GbkZ-JqF6PEaF2ZofBV2u9WivMy_MqGPevnc"
-
-        if not self.supabase_url or not self.supabase_key:
-            raise ValueError("Supabase credentials are missing or invalid.")
-
-        self.client = create_client(self.supabase_url, self.supabase_key)
+            self.supabase_url = SUPABASE_URL
+            self.supabase_key = SUPABASE_KEY
+            self.client = create_client(self.supabase_url, self.supabase_key)
 
     def upload(self, bucket_name: str, local_path: str, remote_path: str) -> str:
         """Uploads a file to Supabase Storage and returns the public URL."""

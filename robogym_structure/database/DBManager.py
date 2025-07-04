@@ -1,21 +1,18 @@
-# models.py
+from database.config import DATABASE_URL
 from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, create_engine, JSON,func
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
 from database.models import User, TrainedModel, TrainSession,UserStats
-import os
-from dotenv import load_dotenv
 from database.FileStorage import FileManager
-# Load environment variables
-load_dotenv()   
 
 
 
-SQLALCHEMY_DATABASE_URL = f"postgresql://postgres.xljntaujspiljiczjzzh:3aCXHe0fDQx0gzNL@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
+
+
 # SQLAlchemy setup
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

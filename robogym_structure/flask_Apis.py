@@ -679,24 +679,6 @@ def api_get_user_stats():
         print(f"Error in getUserStats: {str(e)}", flush=True)
         return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
-@app.post("/test1")
-# @token_required
-def api_test1():
-
-    if db.create_trained_model(
-                    name="sa",
-                    model_path="asd",
-                    algorithm=AlgorithmType.PPO,  # Default to PPO for now
-                    robotic_arm=RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
-                    user_id=10,
-                    timesteps=20,
-                    total_time=20.2,
-                    mean_reward=-5,
-                ):
-        return jsonify({"status": "ok", "message": "Model exists"}), 200
-    else:
-        return jsonify({"status": "error", "message": "Failed to rename model"}), 500   
-
 
 if __name__ == "__main__":
     print(" Starting RoboGym Flask API server...")
