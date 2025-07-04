@@ -45,31 +45,6 @@ class PickAndPlaceTask(BaseTask):
         self.stabilize_counter = 0
         self.prev_dist = None
 
-        # if self.source_marker is None:
-        #     self.source_marker = p.createMultiBody(
-        #         baseMass=0,
-        #         baseVisualShapeIndex=p.createVisualShape(
-        #             shapeType=p.GEOM_SPHERE,
-        #             radius=0.03,
-        #             rgbaColor=[1, 0, 0, 0.4]
-        #         ),
-        #         basePosition=self.env.source_pos.tolist()
-        #     )
-
-        # if self.target_marker is None:
-        #     self.target_marker = p.createMultiBody(
-        #         baseMass=0,
-        #         baseVisualShapeIndex=p.createVisualShape(
-        #             shapeType=p.GEOM_BOX,
-        #             halfExtents=[0.03, 0.03, 0.03],
-        #             rgbaColor=[0, 1, 0, 0.4]
-        #         ),
-        #         basePosition=self.env.target_pos.tolist()
-        #     )
-
-        # p.resetBasePositionAndOrientation(self.source_marker, self.env.source_pos.tolist(), [0, 0, 0, 1])
-        # p.resetBasePositionAndOrientation(self.target_marker, self.env.target_pos.tolist(), [0, 0, 0, 1])
-
         if hasattr(self.env, "object_id") and self.env.object_id is not None:
             p.resetBasePositionAndOrientation(self.env.object_id, self.env.source_pos.tolist(), [0, 0, 0, 1])
 

@@ -1,9 +1,9 @@
 # flask_api.py
 from flask import Flask, json, request, jsonify, Response, stream_with_context
 from flask_cors import CORS, cross_origin
-from GUIMain import initialize, train as train_model_func, list_models as list_models_func, delete as delete_model_func, test as Test_Model, upload_model, GetModelRewards, compareModels
-from model_manager import manager as mm
-from database import models as db  
+from ModelService import ModelService
+
+from database.DBManager import DBManager 
 from multiprocessing import Process
 from functools import wraps
 import jwt
@@ -11,10 +11,15 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import time
-from FileStorage import upload_to_storage, delete_from_storage,download_from_storage
+from database.FileStorage import FileManager
+from database.Enums import AlgorithmType,RoboticArmType
 # Load environment variables from Credentials.env
 load_dotenv('Credentials.env')
 
+# Instantiate managers
+db = DBManager()
+file_storage = FileManager()
+model_service = ModelService()
 app = Flask(__name__)
 # Configure CORS to allow all origins for development
 CORS(app, 
@@ -152,7 +157,7 @@ def api_train():
         mean_reward = None
         logs = []
         try:
-            for event in train_model_func(
+            for event in model_service.train(
                 model_name=model_name,
                 timesteps=timesteps,
                 task_number=task_number,
@@ -188,12 +193,12 @@ def api_train():
             total_time = time.time() - start_time
             remote_model_path = f"user_{currUserID}/{model_name}.zip"
             try:
-                model_url = upload_to_storage("models", local_model_path, remote_model_path)
+                model_url = file_storage.upload("models", local_model_path, remote_model_path)
                 trained_model = db.create_trained_model(
                     name=model_name,
                     model_path=model_url,
-                    algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
-                    robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
+                    algorithm=AlgorithmType.PPO,  # Default to PPO for now
+                    robotic_arm=RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
                     user_id=currUserID,
                     timesteps=timesteps,
                     total_time=total_time,
@@ -247,7 +252,7 @@ def api_continue_train():
     local_model_path = f"{user_models_dir}/{model_name}.zip"
     remote_model_path = f"user_{currUserID}/{model_name}.zip"
 
-    success, msg = download_from_storage("models", remote_model_path, local_model_path)
+    success, msg = file_storage.download("models", remote_model_path, local_model_path)
     if not success:
         return jsonify({"status": "error", "message": f"Failed to download model: {msg}"}), 500
 
@@ -261,7 +266,7 @@ def api_continue_train():
         mean_reward = None
 
         try:
-            for event in train_model_func(
+            for event in model_service.train(
                 model_name=model_name,
                 timesteps=timesteps,
                 task_number=task_number,
@@ -295,7 +300,7 @@ def api_continue_train():
             total_time = time.time() - start_time
 
             # Upload updated model to Supabase
-            upload_to_storage("models", local_model_path, remote_model_path)
+            file_storage.upload("models", local_model_path, remote_model_path)
             if model_id is not None:
                 db.update_trained_model(
                     model_id=model_id,
@@ -384,7 +389,7 @@ def api_upload_model():
 
     try:
         remote_model_path = f"user_{currUserID}/{modelName}.zip"
-        model_url = upload_to_storage("models", filePath, remote_model_path)
+        model_url = file_storage.upload("models", filePath, remote_model_path)
 
         # Create user-specific directory if it doesn't exist
         user_models_dir = f"trained_models/user_{currUserID}"
@@ -392,14 +397,14 @@ def api_upload_model():
         
         # First upload the model file to user-specific directory
         target_path = f"{user_models_dir}/{modelName}.zip"
-        upload_model(file_path=filePath, model_name=modelName, target_path=target_path)
+        model_service.upload_model(file_path=filePath, model_name=modelName, target_path=target_path)
         
         # Create database record for the uploaded model
         trained_model = db.create_trained_model(
             name=modelName,
             model_path=model_url,
-            algorithm=db.AlgorithmType.PPO,  # Default to PPO for uploaded models
-            robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for uploaded models
+            algorithm=AlgorithmType.PPO,  # Default to PPO for uploaded models
+            robotic_arm=RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for uploaded models
             user_id=currUserID
         )
 
@@ -431,7 +436,7 @@ def api_download_model():
         return "Invalid parameter types", 400
 
     remote_model_path = f"user_{currUserID}/{model_name}.zip"
-    success, msg = download_from_storage("models", remote_model_path, local_model_path)
+    success, msg = file_storage.download("models", remote_model_path, local_model_path)
 
     if not success:
         return jsonify({"status": "error", "message": f"Failed to download model: {msg}"}), 500
@@ -542,7 +547,7 @@ def api_delete_model():
         if not (db.delete_trained_model(currUserID, model_name)):
             return jsonify({"status": "error", "message": "Failed to delete model from database"}), 500
 
-        cloud_deleted = delete_from_storage("models", f"user_{currUserID}/{model_name}.zip")
+        cloud_deleted = file_storage.delete("models", f"user_{currUserID}/{model_name}.zip")
 
         if not cloud_deleted:
             return jsonify({
@@ -551,7 +556,7 @@ def api_delete_model():
             }), 500
         # Delete the model file from user-specific directory
         user_models_dir = f"trained_models/user_{currUserID}"
-        delete_model_func(model_name, model_path=f"{user_models_dir}/{model_name}.zip")
+        model_service.delete(model_name, model_path=f"{user_models_dir}/{model_name}.zip")
         
         # The database record will be automatically deleted due to cascade delete
         return jsonify({"status": "deleted", "message": "Model and its records deleted successfully"})
@@ -577,10 +582,9 @@ def api_test():
 
     def event_stream():
         yield f"data: 🔧 Starting test for model={model_name}, task={task_name}, episodes={episodes}\n\n"
-        model = mm.load_model(model_name, model_path=f"{user_models_dir}/{model_name}.zip")
-        yield f"data: ✅ Loaded model\n\n"
+        model_path=f"{user_models_dir}/{model_name}.zip"
         try:
-            yield from Test_Model(model, episodes=int(episodes), task_name="pick_and_place")
+            yield from model_service.test(model_name, model_path,episodes=int(episodes), task_name="pick_and_place")
         except Exception as e:
             yield f"data: ❌ test_model raised exception: {str(e)}\n\n"
         yield "event: end\ndata: done\n\n"
@@ -588,7 +592,7 @@ def api_test():
         db.increment_tests_run(int(currUserID) if currUserID is not None else 0)
     
         # Start the test in a separate process
-        Process(target=Test_Model, args=(model_name, task_name, int(episodes), user_models_dir)).start()
+        Process(target=model_service.test, args=(model_name, task_name, int(episodes), user_models_dir)).start()
     return Response(stream_with_context(event_stream()), mimetype="text/event-stream")
 
 @app.post("/rename")
@@ -600,7 +604,8 @@ def api_rename_model():
     model_name = data["model_name"]
     new_name = data["new_name"]
     currUserID = data["currUserID"]
-
+    yield f'{model_name}'
+    print(new_name)
     if not data or not isinstance(data, dict):
         return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
     
@@ -610,6 +615,7 @@ def api_rename_model():
         return jsonify({"status": "error", "message": "Valid new name is required"}), 400
     
     if db.model_rename(currUserID, model_name, new_name):
+        # model_service.rename_local_model_file(currUserID, model_name, new_name)
         return jsonify({"status": "ok", "message": "Model renamed successfully"}), 200
     else:
         return jsonify({"status": "error", "message": "Failed to rename model"}), 500   
@@ -688,9 +694,9 @@ def api_test1():
     if db.create_trained_model(
                     name="sa",
                     model_path="asd",
-                    algorithm=db.AlgorithmType.PPO,  # Default to PPO for now
-                    robotic_arm=db.RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
-                    user_id=2,
+                    algorithm=AlgorithmType.PPO,  # Default to PPO for now
+                    robotic_arm=RoboticArmType.KUKA_IIWA,  # Default to KUKA_IIWA for now
+                    user_id=10,
                     timesteps=20,
                     total_time=20.2,
                     mean_reward=-5,

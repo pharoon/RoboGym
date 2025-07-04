@@ -33,16 +33,11 @@
 #     model_path = "trained_models/test1.zip"  # Adjust as needed
 #     test_model(model_path)
 
-from database import models as db  
+from database.DBManager import DBManager as db  
 
 try:
-   db.create_train_session(
-                    model_id=5,
-                    user_id=2,
-                    timesteps=100,
-                    total_time=10.2,
-                    mean_reward=10,
-                    train_log=None
-                )
+    sd=db()
+
+    sd.model_rename(10,"a7m","roka")
 except Exception as e:
     print(f"Error creating model: {e}")
