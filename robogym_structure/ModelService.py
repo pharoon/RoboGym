@@ -46,7 +46,7 @@ class ModelService:
 
     def test(self, model_name, model_path, task_name: str, episodes: int):
         RL_model = self.model_manager.load_model(model_name, model_path=model_path)
-        yield f"data: ✅ Loaded model\n\n"
+        yield f"data: Loaded model\n\n"
         yield from self.trainer.test_model(RL_model, task_name, episodes)
 
     def delete(self, model_name: str, model_path: Optional[str] = None):
@@ -66,7 +66,7 @@ class ModelService:
         print(f" Model uploaded and registered as '{model_name}'")
 
 
-    def rename_local_model_file(user_id: int, old_name: str, new_name: str) -> str:
+    def rename_local_model_file(self, user_id: int, old_name: str, new_name: str) -> str:
         
         user_folder = f"trained_models/user_{user_id}"
         old_path = os.path.join(user_folder, f"{old_name}.zip")
@@ -79,7 +79,7 @@ class ModelService:
         try:
             os.rename(old_path, new_path)
         except Exception as e:
-            print(f"⚠️ Failed to rename file: {e}. Continuing without error.")
+            print(f"Failed to rename file: {e}. Continuing without error.")
 
         return new_path
 

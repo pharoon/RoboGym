@@ -117,12 +117,6 @@ def login():
         'email': user.email
     })
 
-@app.post("/initialize")
-# @token_required
-def api_initialize():
-    initialize()
-    return jsonify({"status": "initialized"})
-
 @app.get("/train")
 # @token_required
 def api_train():
@@ -604,8 +598,6 @@ def api_rename_model():
     model_name = data["model_name"]
     new_name = data["new_name"]
     currUserID = data["currUserID"]
-    yield f'{model_name}'
-    print(new_name)
     if not data or not isinstance(data, dict):
         return jsonify({"status": "error", "message": "Invalid or missing JSON data"}), 400
     
@@ -615,7 +607,7 @@ def api_rename_model():
         return jsonify({"status": "error", "message": "Valid new name is required"}), 400
     
     if db.model_rename(currUserID, model_name, new_name):
-        # model_service.rename_local_model_file(currUserID, model_name, new_name)
+        model_service.rename_local_model_file(currUserID, model_name, new_name)
         return jsonify({"status": "ok", "message": "Model renamed successfully"}), 200
     else:
         return jsonify({"status": "error", "message": "Failed to rename model"}), 500   

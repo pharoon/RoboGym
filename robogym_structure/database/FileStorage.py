@@ -30,7 +30,7 @@ class FileManager:
             self.client.storage.from_(bucket_name).remove([remote_path])
             return True
         except Exception as e:
-            print(f"❌ Error deleting from storage: {str(e)}")
+            print(f"Error deleting from storage: {str(e)}")
             return False
 
     def download(self, bucket_name: str, remote_path: str, local_path: str):
@@ -39,27 +39,27 @@ class FileManager:
             res = self.client.storage.from_(bucket_name).download(remote_path)
             with open(local_path, "wb") as f:
                 f.write(res)
-            return True, f"✅ Downloaded to {local_path}"
+            return True, f"Downloaded to {local_path}"
         except Exception as e:
-            return False, f"❌ {str(e)}"
+            return False, f"{str(e)}"
     def rename_file(self,bucket: str, old_path: str, new_path: str):
         # Step 1: Download old file content
         response = self.client.storage.from_(bucket).download(old_path)
         if not response:
-            print("❌ Failed to download existing file.")
+            print("Failed to download existing file.")
             return False
 
         # Step 2: Upload the content to the new path
         upload_response =self.client.storage.from_(bucket).upload(new_path, response, {'upsert': 'true', 'content-type': 'application/zip'})
         if not upload_response:
-            print("❌ Failed to upload to new path.")
+            print("Failed to upload to new path.")
             return False
 
         # Step 3: Delete the old file
         delete_response = self.client.storage.from_(bucket).remove([old_path])
         if not delete_response:
-            print("⚠️ Uploaded to new path but failed to delete old path.")
+            print("Uploaded to new path but failed to delete old path.")
         else:
-            print("✅ Old file deleted.")
-        print("✅ Supabase file renamed.")
+            print("Old file deleted.")
+        print("Supabase file renamed.")
         return True

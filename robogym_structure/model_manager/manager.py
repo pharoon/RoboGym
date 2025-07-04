@@ -25,9 +25,8 @@ class ModelManager:
         try:
             with open(self._get_metadata_path(), "w") as f:
                 json.dump(metadata, f, indent=4)
-            print("[✓] Metadata saved.")
         except Exception as e:
-            print(f"[!] Failed to save metadata: {e}")
+            print(f"Failed to save metadata: {e}")
 
     def save_model(self, model, model_name: str, algorithm: str = "PPO", model_path: Optional[str] = None):
         """
@@ -47,7 +46,6 @@ class ModelManager:
             "path": model_path
         }
         self._save_metadata(metadata)
-        print(f"Model '{model_name}' saved and registered.")
 
     def load_model(self, model_name: str, model_path: Optional[str] = None):
         """
@@ -74,18 +72,16 @@ class ModelManager:
         """
         if model_path and os.path.exists(model_path):
             os.remove(model_path)
-            print(f"[✓] Model file deleted at: {model_path}")
         elif model_path:
-            print(f"[!] Model file not found at: {model_path}")
+            print(f"Model file not found at: {model_path}")
 
         metadata = self._load_metadata()
         if model_name in metadata:
             default_path = metadata[model_name]["path"]
             if not model_path and os.path.exists(default_path):
                 os.remove(default_path)
-                print(f"[✓] Model file deleted at: {default_path}")
+                print(f"Model file deleted at: {default_path}")
             del metadata[model_name]
             self._save_metadata(metadata)
-            print(f"[✓] Model '{model_name}' metadata deleted.")
         else:
-            print(f"[!] Model '{model_name}' not found in metadata.")
+            print(f"Model '{model_name}' not found in metadata.")

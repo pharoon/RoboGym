@@ -23,7 +23,7 @@ Base = declarative_base()
 class DBManager:
     def __init__(self):
         self.db = SessionLocal()
-        
+        self.FM = FileManager()
 
     def close(self):
         self.db.close()
@@ -56,7 +56,6 @@ class DBManager:
     def get_user_stats(self, user_id: int):
         stats = self.db.query(UserStats).filter(UserStats.user_id == user_id).first()
         if not stats:
-            print(f"[WARN] No stats found for user_id={user_id}")
             return None
         return {
             "tests_run": stats.tests_run,
@@ -91,7 +90,6 @@ class DBManager:
         try:
             stats = self.db.query(UserStats).filter(UserStats.user_id == user_id).first()
             if not stats:
-                print(f"[WARN] No stats found for user_id={user_id}")
                 return None
             stats.train_sessions_count += 1
             stats.trained_models_count += 1
@@ -123,7 +121,6 @@ class DBManager:
             self.db.refresh(model)
             return model
         except Exception as e:
-            print(f"Error creating training model: {e}")
             self.db.rollback()
             return None
 
@@ -137,7 +134,6 @@ class DBManager:
         try:
             model = self.get_trained_model_by_name_and_user(user_id, model_name)
             if not model:
-                print(f"Model '{model_name}' not found for user ID {user_id}")
                 return False
             self.db.delete(model)
             stats = self.db.query(UserStats).filter(UserStats.user_id == user_id).first()
@@ -154,7 +150,6 @@ class DBManager:
         try:
             model = self.db.query(TrainedModel).filter(TrainedModel.id == model_id).first()
             if not model:
-                print(f"Model with ID {model_id} not found.")
                 return False
             model.model_path = new_model_path
             model.total_timesteps += timesteps
@@ -170,21 +165,17 @@ class DBManager:
     def model_rename(self, user_id: int, old_name: str, new_name: str):
         try:
             if not new_name:
-                print("New model name cannot be empty.")
                 return False
             model = self.get_trained_model_by_name_and_user(user_id, old_name)
             if not model:
-                print(f"Model '{old_name}' not found for user ID {user_id}")
                 return False
             existing_model = self.get_trained_model_by_name_and_user(user_id, new_name)
             if existing_model:
-                print(f"Model '{new_name}' already exists for user ID {user_id}")
                 return False
             bucket = "models"
             old_key = extract_storage_key(model.model_path, bucket)
             new_key = old_key.replace(old_name, new_name)
-            FM=FileManager()
-            success = FM.rename_file(bucket, old_key, new_key)
+            success = self.FM.rename_file(bucket, old_key, new_key)
             if not success:
                 return False
             model.name = new_name
@@ -192,7 +183,7 @@ class DBManager:
             self.db.commit()
             return True
         except Exception as e:
-            print(f"Error renaming model: {e}")
+            print(f"Error renaming model: {e}", flush=True)
             self.db.rollback()
             return False
 

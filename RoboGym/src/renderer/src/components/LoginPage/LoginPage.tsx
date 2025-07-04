@@ -24,20 +24,33 @@ const Login:React.FC<LoginProps> = ( props) => {
   })
   const navigate = useNavigate()
 
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useState<Object>({
+    email:"Email is missing",
+    password:"Password is missing",
+    username:"Username is missing",
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
+    if (e.target.name === 'username') {
+      setErrors({ ...errors, username: e.target.value.length > 3 ? undefined:'Username is too short' })
+    }
+
     if (e.target.name === 'email') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      setErrors({ ...errors, email: emailRegex.test(e.target.value) ? null : 'Invalid email' })
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      setErrors({ ...errors, email: emailRegex.test(e.target.value) ? undefined:'Invalid email' })
     }
     if (e.target.name === 'password') {
-      setErrors({ ...errors, password: e.target.value.length >= 6 ? null : 'Password too short' })
+        setErrors({ ...errors, password: e.target.value.length >= 8 ? undefined : 'Password is too short, password must be at least 8 charachters' })
+    
     }
   }
 
   const register = async () => {
+    if(Object.values(errors).some((value) => typeof(value) === "string")){
+        Object.values(errors).map((error) => {toast.warn(error as string)})
+        return;
+    }
     setLoading(true)
     fetch('http://localhost:5000/register', {
       method: 'POST',
@@ -57,7 +70,7 @@ const Login:React.FC<LoginProps> = ( props) => {
         else{
           const result : any = await response.json()
           console.log("Result is now ", result)
-          toast.error(`Error: ${result.message}`)
+          toast.error(`${result.message}`)
           setLoading(false)
         }
       })
